@@ -1,0 +1,36 @@
+{"name": "modus_ponens", "thm": "( P > Q ) , P |- Q", "prompt": "THM ( P > Q ) , P SEQ Q PRF", "classical_only": false, "min_lines_ub": 3, "bin": "<=6"}
+{"name": "modus_tollens", "thm": "( P > Q ) , ( ~ Q ) |- ( ~ P )", "prompt": "THM ( P > Q ) , ( ~ Q ) SEQ ( ~ P ) PRF", "classical_only": false, "min_lines_ub": 6, "bin": "<=6"}
+{"name": "disjunctive_syllogism", "thm": "( P v Q ) , ( ~ P ) |- Q", "prompt": "THM ( P v Q ) , ( ~ P ) SEQ Q PRF", "classical_only": false, "min_lines_ub": 7, "bin": ">6"}
+{"name": "hypothetical_syllogism", "thm": "( P > Q ) , ( Q > R ) |- ( P > R )", "prompt": "THM ( P > Q ) , ( Q > R ) SEQ ( P > R ) PRF", "classical_only": false, "min_lines_ub": 6, "bin": "<=6"}
+{"name": "constructive_dilemma", "thm": "( P > R ) , ( P v Q ) , ( Q > S ) |- ( R v S )", "prompt": "THM ( P > R ) , ( P v Q ) , ( Q > S ) SEQ ( R v S ) PRF", "classical_only": false, "min_lines_ub": 10, "bin": ">6"}
+{"name": "simple_dilemma", "thm": "( ( ~ P ) > Q ) , ( P > Q ) |- Q", "prompt": "THM ( ( ~ P ) > Q ) , ( P > Q ) SEQ Q PRF", "classical_only": true, "min_lines_ub": 12, "bin": ">6"}
+{"name": "resolution", "thm": "( ( ~ P ) v R ) , ( P v Q ) |- ( Q v R )", "prompt": "THM ( ( ~ P ) v R ) , ( P v Q ) SEQ ( Q v R ) PRF", "classical_only": false, "min_lines_ub": 14, "bin": ">6"}
+{"name": "demorgan_nand_to_or", "thm": "( ~ ( P & Q ) ) |- ( ( ~ P ) v ( ~ Q ) )", "prompt": "THM ( ~ ( P & Q ) ) SEQ ( ( ~ P ) v ( ~ Q ) ) PRF", "classical_only": true, "min_lines_ub": 16, "bin": ">6"}
+{"name": "demorgan_or_to_nand", "thm": "( ( ~ P ) v ( ~ Q ) ) |- ( ~ ( P & Q ) )", "prompt": "THM ( ( ~ P ) v ( ~ Q ) ) SEQ ( ~ ( P & Q ) ) PRF", "classical_only": false, "min_lines_ub": 10, "bin": ">6"}
+{"name": "demorgan_nor_to_and", "thm": "( ~ ( P v Q ) ) |- ( ( ~ P ) & ( ~ Q ) )", "prompt": "THM ( ~ ( P v Q ) ) SEQ ( ( ~ P ) & ( ~ Q ) ) PRF", "classical_only": false, "min_lines_ub": 10, "bin": ">6"}
+{"name": "demorgan_and_to_nor", "thm": "( ( ~ P ) & ( ~ Q ) ) |- ( ~ ( P v Q ) )", "prompt": "THM ( ( ~ P ) & ( ~ Q ) ) SEQ ( ~ ( P v Q ) ) PRF", "classical_only": false, "min_lines_ub": 10, "bin": ">6"}
+{"name": "contraposition", "thm": "( P > Q ) |- ( ( ~ Q ) > ( ~ P ) )", "prompt": "THM ( P > Q ) SEQ ( ( ~ Q ) > ( ~ P ) ) PRF", "classical_only": false, "min_lines_ub": 7, "bin": ">6"}
+{"name": "contraposition_conv", "thm": "( ( ~ Q ) > ( ~ P ) ) |- ( P > Q )", "prompt": "THM ( ( ~ Q ) > ( ~ P ) ) SEQ ( P > Q ) PRF", "classical_only": true, "min_lines_ub": 8, "bin": ">6"}
+{"name": "dn_intro", "thm": "P |- ( ~ ( ~ P ) )", "prompt": "THM P SEQ ( ~ ( ~ P ) ) PRF", "classical_only": false, "min_lines_ub": 4, "bin": "<=6"}
+{"name": "dn_elim", "thm": "( ~ ( ~ P ) ) |- P", "prompt": "THM ( ~ ( ~ P ) ) SEQ P PRF", "classical_only": true, "min_lines_ub": 2, "bin": "<=6"}
+{"name": "triple_negation", "thm": "( ~ ( ~ ( ~ P ) ) ) |- ( ~ P )", "prompt": "THM ( ~ ( ~ ( ~ P ) ) ) SEQ ( ~ P ) PRF", "classical_only": false, "min_lines_ub": 2, "bin": "<=6"}
+{"name": "excluded_middle", "thm": " |- ( P v ( ~ P ) )", "prompt": "THM SEQ ( P v ( ~ P ) ) PRF", "classical_only": true, "min_lines_ub": 10, "bin": ">6"}
+{"name": "peirce", "thm": " |- ( ( ( P > Q ) > P ) > P )", "prompt": "THM SEQ ( ( ( P > Q ) > P ) > P ) PRF", "classical_only": true, "min_lines_ub": 13, "bin": ">6"}
+{"name": "conditional_ordering", "thm": " |- ( ( P > Q ) v ( Q > P ) )", "prompt": "THM SEQ ( ( P > Q ) v ( Q > P ) ) PRF", "classical_only": true, "min_lines_ub": 15, "bin": ">6"}
+{"name": "identity", "thm": " |- ( P > P )", "prompt": "THM SEQ ( P > P ) PRF", "classical_only": false, "min_lines_ub": 2, "bin": "<=6"}
+{"name": "peirce_sequent", "thm": "( ( P > Q ) > P ) |- P", "prompt": "THM ( ( P > Q ) > P ) SEQ P PRF", "classical_only": true, "min_lines_ub": 12, "bin": ">6"}
+{"name": "consequentia_mirabilis", "thm": "( ( ~ P ) > P ) |- P", "prompt": "THM ( ( ~ P ) > P ) SEQ P PRF", "classical_only": true, "min_lines_ub": 6, "bin": "<=6"}
+{"name": "import", "thm": "( P > ( Q > R ) ) |- ( ( P & Q ) > R )", "prompt": "THM ( P > ( Q > R ) ) SEQ ( ( P & Q ) > R ) PRF", "classical_only": false, "min_lines_ub": 7, "bin": ">6"}
+{"name": "export", "thm": "( ( P & Q ) > R ) |- ( P > ( Q > R ) )", "prompt": "THM ( ( P & Q ) > R ) SEQ ( P > ( Q > R ) ) PRF", "classical_only": false, "min_lines_ub": 7, "bin": ">6"}
+{"name": "dist_and_over_or", "thm": "( P & ( Q v R ) ) |- ( ( P & Q ) v ( P & R ) )", "prompt": "THM ( P & ( Q v R ) ) SEQ ( ( P & Q ) v ( P & R ) ) PRF", "classical_only": false, "min_lines_ub": 11, "bin": ">6"}
+{"name": "dist_and_over_or_conv", "thm": "( ( P & Q ) v ( P & R ) ) |- ( P & ( Q v R ) )", "prompt": "THM ( ( P & Q ) v ( P & R ) ) SEQ ( P & ( Q v R ) ) PRF", "classical_only": false, "min_lines_ub": 14, "bin": ">6"}
+{"name": "dist_or_over_and", "thm": "( P v ( Q & R ) ) |- ( ( P v Q ) & ( P v R ) )", "prompt": "THM ( P v ( Q & R ) ) SEQ ( ( P v Q ) & ( P v R ) ) PRF", "classical_only": false, "min_lines_ub": 14, "bin": ">6"}
+{"name": "dist_or_over_and_conv", "thm": "( ( P v Q ) & ( P v R ) ) |- ( P v ( Q & R ) )", "prompt": "THM ( ( P v Q ) & ( P v R ) ) SEQ ( P v ( Q & R ) ) PRF", "classical_only": false, "min_lines_ub": 13, "bin": ">6"}
+{"name": "explosion", "thm": "( P & ( ~ P ) ) |- Q", "prompt": "THM ( P & ( ~ P ) ) SEQ Q PRF", "classical_only": false, "min_lines_ub": 5, "bin": "<=6"}
+{"name": "negative_paradox", "thm": "( ~ P ) |- ( P > Q )", "prompt": "THM ( ~ P ) SEQ ( P > Q ) PRF", "classical_only": false, "min_lines_ub": 5, "bin": "<=6"}
+{"name": "positive_paradox", "thm": "Q |- ( P > Q )", "prompt": "THM Q SEQ ( P > Q ) PRF", "classical_only": false, "min_lines_ub": 4, "bin": "<=6"}
+{"name": "negated_conditional", "thm": "( ~ ( P > Q ) ) |- ( P & ( ~ Q ) )", "prompt": "THM ( ~ ( P > Q ) ) SEQ ( P & ( ~ Q ) ) PRF", "classical_only": true, "min_lines_ub": 18, "bin": ">6"}
+{"name": "negated_conditional_conv", "thm": "( P & ( ~ Q ) ) |- ( ~ ( P > Q ) )", "prompt": "THM ( P & ( ~ Q ) ) SEQ ( ~ ( P > Q ) ) PRF", "classical_only": false, "min_lines_ub": 7, "bin": ">6"}
+{"name": "reductio_pair", "thm": "( P > ( ~ Q ) ) , ( P > Q ) |- ( ~ P )", "prompt": "THM ( P > ( ~ Q ) ) , ( P > Q ) SEQ ( ~ P ) PRF", "classical_only": false, "min_lines_ub": 7, "bin": ">6"}
+{"name": "absorption", "thm": "( P > Q ) |- ( P > ( P & Q ) )", "prompt": "THM ( P > Q ) SEQ ( P > ( P & Q ) ) PRF", "classical_only": false, "min_lines_ub": 5, "bin": "<=6"}
+{"name": "frege_distribution", "thm": "( P > ( Q > R ) ) |- ( ( P > Q ) > ( P > R ) )", "prompt": "THM ( P > ( Q > R ) ) SEQ ( ( P > Q ) > ( P > R ) ) PRF", "classical_only": false, "min_lines_ub": 8, "bin": ">6"}

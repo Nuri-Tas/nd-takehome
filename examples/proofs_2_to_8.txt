@@ -1,0 +1,67 @@
+# Verifier-accepted proofs from a random generator, three per length 2..8.
+# Each example is one whitespace-separated string; rules used are listed above it.
+# These are illustrative only (random compositions, some trivial) -- NOT training data.
+
+## length 2  rules ['ANDE1']
+THM ( Q & S ) SEQ Q PRF N1 ( Q & S ) : PR ; N2 Q : ANDE1 N1 ; QED
+
+## length 2  rules ['ANDE2']
+THM ( ( ~ Q ) & ( P v R ) ) SEQ ( P v R ) PRF N1 ( ( ~ Q ) & ( P v R ) ) : PR ; N2 ( P v R ) : ANDE2 N1 ; QED
+
+## length 2  rules ['ANDE2']
+THM ( ( S v S ) & ( R & S ) ) SEQ ( R & S ) PRF N1 ( ( S v S ) & ( R & S ) ) : PR ; N2 ( R & S ) : ANDE2 N1 ; QED
+
+## length 3  rules ['DN', 'IMPI']
+THM SEQ ( ( ~ ( ~ Q ) ) > Q ) PRF N1 | ( ~ ( ~ Q ) ) : AS ; N2 | Q : DN N1 ; N3 ( ( ~ ( ~ Q ) ) > Q ) : IMPI N1 N2 ; QED
+
+## length 3  rules ['ANDE2']
+THM ( ( ~ Q ) & ( P & P ) ) SEQ P PRF N1 ( ( ~ Q ) & ( P & P ) ) : PR ; N2 ( P & P ) : ANDE2 N1 ; N3 P : ANDE2 N2 ; QED
+
+## length 3  rules ['IMPI', 'ORI2']
+THM SEQ ( S v ( ( R > ( P v Q ) ) > ( R > ( P v Q ) ) ) ) PRF N1 | ( R > ( P v Q ) ) : AS ; N2 ( ( R > ( P v Q ) ) > ( R > ( P v Q ) ) ) : IMPI N1 N1 ; N3 ( S v ( ( R > ( P v Q ) ) > ( R > ( P v Q ) ) ) ) : ORI2 N2 ; QED
+
+## length 4  rules ['ORE']
+THM ( S v S ) SEQ S PRF N1 ( S v S ) : PR ; N2 | S : AS ; N3 | S : AS ; N4 S : ORE N1 N2 N2 N3 N3 ; QED
+
+## length 4  rules ['ORE']
+THM ( Q v Q ) SEQ Q PRF N1 ( Q v Q ) : PR ; N2 | Q : AS ; N3 | Q : AS ; N4 Q : ORE N1 N2 N2 N3 N3 ; QED
+
+## length 4  rules ['ANDI', 'IMPI']
+THM ( S v ( R & Q ) ) SEQ ( ( S > S ) & ( S v ( R & Q ) ) ) PRF N1 ( S v ( R & Q ) ) : PR ; N2 | S : AS ; N3 ( S > S ) : IMPI N2 N2 ; N4 ( ( S > S ) & ( S v ( R & Q ) ) ) : ANDI N3 N1 ; QED
+
+## length 5  rules ['DN', 'ORE']
+THM ( ( ~ ( ~ S ) ) v S ) SEQ S PRF N1 ( ( ~ ( ~ S ) ) v S ) : PR ; N2 | ( ~ ( ~ S ) ) : AS ; N3 | S : DN N2 ; N4 | S : AS ; N5 S : ORE N1 N2 N3 N4 N4 ; QED
+
+## length 5  rules ['IMPI', 'ORI1']
+THM SEQ ( ( ~ R ) > ( Q > ( ( ~ R ) v R ) ) ) PRF N1 | ( ~ R ) : AS ; N2 | | Q : AS ; N3 | | ( ( ~ R ) v R ) : ORI1 N1 ; N4 | ( Q > ( ( ~ R ) v R ) ) : IMPI N2 N3 ; N5 ( ( ~ R ) > ( Q > ( ( ~ R ) v R ) ) ) : IMPI N1 N4 ; QED
+
+## length 5  rules ['BOTE', 'ORE']
+THM ( F v ( R v S ) ) SEQ ( R v S ) PRF N1 ( F v ( R v S ) ) : PR ; N2 | F : AS ; N3 | ( R v S ) : BOTE N2 ; N4 | ( R v S ) : AS ; N5 ( R v S ) : ORE N1 N2 N3 N4 N4 ; QED
+
+## length 6  rules ['ANDE1', 'ORE', 'ORI2']
+THM ( ( S & ( P v R ) ) v S ) SEQ ( P v S ) PRF N1 ( ( S & ( P v R ) ) v S ) : PR ; N2 | ( S & ( P v R ) ) : AS ; N3 | S : ANDE1 N2 ; N4 | S : AS ; N5 S : ORE N1 N2 N3 N4 N4 ; N6 ( P v S ) : ORI2 N5 ; QED
+
+## length 6  rules ['DN', 'IMPE', 'IMPI']
+THM SEQ ( ( ~ ( ~ ( Q > Q ) ) ) > ( Q > Q ) ) PRF N1 | ( ~ ( ~ ( Q > Q ) ) ) : AS ; N2 | | Q : AS ; N3 | | ( Q > Q ) : DN N1 ; N4 | | Q : IMPE N3 N2 ; N5 | ( Q > Q ) : IMPI N2 N4 ; N6 ( ( ~ ( ~ ( Q > Q ) ) ) > ( Q > Q ) ) : IMPI N1 N5 ; QED
+
+## length 6  rules ['ANDE2', 'IMPI', 'ORE']
+THM SEQ ( ( ( S & S ) v S ) > S ) PRF N1 | ( ( S & S ) v S ) : AS ; N2 | | ( S & S ) : AS ; N3 | | S : ANDE2 N2 ; N4 | | S : AS ; N5 | S : ORE N1 N2 N3 N4 N4 ; N6 ( ( ( S & S ) v S ) > S ) : IMPI N1 N5 ; QED
+
+## length 7  rules ['IMPE', 'IMPI', 'ORI2']
+THM ( ( Q v P ) > ( R & Q ) ) , ( Q v P ) SEQ ( Q v ( R & Q ) ) PRF N1 ( ( Q v P ) > ( R & Q ) ) : PR ; N2 ( Q v P ) : PR ; N3 | ( ( Q v P ) > ( R & Q ) ) : AS ; N4 | ( R & Q ) : IMPE N3 N2 ; N5 | ( Q v ( R & Q ) ) : ORI2 N4 ; N6 ( ( ( Q v P ) > ( R & Q ) ) > ( Q v ( R & Q ) ) ) : IMPI N3 N5 ; N7 ( Q v ( R & Q ) ) : IMPE N6 N1 ; QED
+
+## length 7  rules ['DN', 'IMPE', 'ORE']
+THM ( ( ~ ( ~ ( S > Q ) ) ) v Q ) , S SEQ Q PRF N1 ( ( ~ ( ~ ( S > Q ) ) ) v Q ) : PR ; N2 S : PR ; N3 | ( ~ ( ~ ( S > Q ) ) ) : AS ; N4 | ( S > Q ) : DN N3 ; N5 | Q : IMPE N4 N2 ; N6 | Q : AS ; N7 Q : ORE N1 N3 N5 N6 N6 ; QED
+
+## length 7  rules ['ANDE2', 'ANDI', 'ORE']
+THM ( ( ~ ( Q v Q ) ) v ( ~ ( Q v Q ) ) ) , S SEQ ( ~ ( Q v Q ) ) PRF N1 ( ( ~ ( Q v Q ) ) v ( ~ ( Q v Q ) ) ) : PR ; N2 S : PR ; N3 | ( ~ ( Q v Q ) ) : AS ; N4 | ( S & ( ~ ( Q v Q ) ) ) : ANDI N2 N3 ; N5 | ( ~ ( Q v Q ) ) : ANDE2 N4 ; N6 | ( ~ ( Q v Q ) ) : AS ; N7 ( ~ ( Q v Q ) ) : ORE N1 N3 N5 N6 N6 ; QED
+
+## length 8  rules ['ANDI', 'DN', 'IMPE', 'IMPI', 'ORI1']
+THM ( ( R v S ) > ( S & Q ) ) , ( R v S ) SEQ ( ( ~ ( ~ S ) ) > ( ( S & ( S & Q ) ) v ( Q v P ) ) ) PRF N1 ( ( R v S ) > ( S & Q ) ) : PR ; N2 ( R v S ) : PR ; N3 | ( ~ ( ~ S ) ) : AS ; N4 | S : DN N3 ; N5 | ( S & Q ) : IMPE N1 N2 ; N6 | ( S & ( S & Q ) ) : ANDI N4 N5 ; N7 | ( ( S & ( S & Q ) ) v ( Q v P ) ) : ORI1 N6 ; N8 ( ( ~ ( ~ S ) ) > ( ( S & ( S & Q ) ) v ( Q v P ) ) ) : IMPI N3 N7 ; QED
+
+## length 8  rules ['ANDI', 'IMPE', 'IMPI', 'ORE']
+THM ( ( R > S ) v ( R & S ) ) SEQ ( R > ( R & S ) ) PRF N1 ( ( R > S ) v ( R & S ) ) : PR ; N2 | R : AS ; N3 | | ( R > S ) : AS ; N4 | | S : IMPE N3 N2 ; N5 | | ( R & S ) : ANDI N2 N4 ; N6 | | ( R & S ) : AS ; N7 | ( R & S ) : ORE N1 N3 N5 N6 N6 ; N8 ( R > ( R & S ) ) : IMPI N2 N7 ; QED
+
+## length 8  rules ['IMPE', 'ORE']
+THM ( ( S > ( P v P ) ) v ( S > ( P v P ) ) ) , ( ( ~ R ) > S ) , ( ~ R ) SEQ ( P v P ) PRF N1 ( ( S > ( P v P ) ) v ( S > ( P v P ) ) ) : PR ; N2 ( ( ~ R ) > S ) : PR ; N3 ( ~ R ) : PR ; N4 | ( S > ( P v P ) ) : AS ; N5 | ( S > ( P v P ) ) : AS ; N6 ( S > ( P v P ) ) : ORE N1 N4 N4 N5 N5 ; N7 S : IMPE N2 N3 ; N8 ( P v P ) : IMPE N6 N7 ; QED
+
