@@ -44,7 +44,7 @@ def main():
     p = ok / total
     z = 1.96; d = 1 + z * z / total
     c = (p + z * z / (2 * total)) / d; h = z * math.sqrt(p * (1 - p) / total + z * z / (4 * total * total)) / d
-    print(f'{fn}: {100*p:.1f}% passed  ({ok}/{total}; 95% CI {100*(c-h):.1f}–{100*(c+h):.1f}%)'
+    print(f'{fn}: {100*p:.1f}% passed  ({ok}/{total}; 95% CI {100*max(0.0,c-h):.1f}–{100*min(1.0,c+h):.1f}%)'
           + (f'  [{miss} theorems missing from your file, counted as failed]' if miss else ''))
 
 
