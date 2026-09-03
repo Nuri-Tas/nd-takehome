@@ -640,3 +640,37 @@ length distribution of the training data.
 
 Removed the unit "nats" from every user-facing document at the reader's request;
 surprisals are now reported as bare log-probabilities.
+
+### Audit against the original brief: four deliverables were missing
+
+Re-read `README_ORIGINAL_TASK.md` item by item and found four required things
+that had not been produced:
+
+1. **Stage 1: "what its length / rule / premise distributions look like (a
+   histogram or two)"** -- never made. Now `figures/fig10_generator_dists.png`.
+2. **Stage 3 item 2: "Your transfer set (7-16 lines), BY LENGTH"** -- I had only
+   the aggregate. Now broken down, `numbers_transfer_by_length.json`.
+3. **Required figure: "the per-length curve for the transfer set with the
+   frozen-model control"** -- now `figures/fig11_transfer_by_length.png`.
+4. **Required figure: "the found-length histogram across RL rounds"** -- the
+   data was in the round logs but never plotted. Now
+   `figures/fig12_found_lengths_rounds.png`.
+
+Transfer by generating length, greedy (frozen control vs after RL): 8.7/33.7,
+9.3/24.7, 4.5/19.3, 5.9/32.4, 3.2/23.4, 4.5/20.7, 6.2/19.8, 5.0/30.8 for
+generating lengths 9..16. RL is above the control at every length and the gap
+does not close.
+
+**Bug caught while building the rule histogram.** The first version counted the
+first rule-name-looking token in each line, which counts the ATOM `R` as the
+reiteration rule `R` -- the same name collision that caused a decoder crash
+earlier in the project. It reported `R` as the most-used rule at 219,528. Fixed
+by taking the token immediately after `:`. Corrected counts: `PR` 213,320,
+`AS` 46,681, `ORI2` 45,286, `ORI1` 45,052, `IMPI` 41,362, `ANDI` 32,202,
+`IMPE` 12,641, `ANDE2` 11,378, `ANDE1` 11,366, `NEGE` 6,971, `R` 6,481,
+`NEGI` 3,735, `DN` 2,394, `BOTE` 1,575, `ORE` 792.
+
+That is the third time this specific collision has produced a wrong result. It
+is worth stating as a general lesson: a symbol that is both a value and an
+operator in the same token stream will keep causing errors unless the parse is
+positional rather than by name matching.

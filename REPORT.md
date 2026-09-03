@@ -266,6 +266,20 @@ an invalid proof. Every proof is still re-checked by the real verifier.
 Result: **18,396 of 18,396** generated proofs pass the verifier. Zero invalid.
 About 5,400 proofs per second.
 
+![Generator distributions](figures/fig10_generator_dists.png)
+
+*Figure 10. What the generator actually produces. Left: proof length, roughly
+flat over 2-6 with a dip at 2 (the cap is enforced -- 0 violations). Middle:
+rule usage on a log scale. `PR` dominates because every proof restates its
+premises; `ORE` is rarest at 792 uses because a case split needs a citable
+disjunction and two branches that reach the same formula. Right: premise count,
+peaking at 2.*
+
+Rule counts: `PR` 213,320 · `AS` 46,681 · `ORI2` 45,286 · `ORI1` 45,052 ·
+`IMPI` 41,362 · `ANDI` 32,202 · `IMPE` 12,641 · `ANDE2` 11,378 · `ANDE1` 11,366
+· `NEGE` 6,971 · `R` 6,481 · `NEGI` 3,735 · `DN` 2,394 · `BOTE` 1,575 ·
+`ORE` 792. Premise counts: 0 -> 1,963 · 1 -> 35,847 · 2 -> 58,045 · 3 -> 20,461.
+
 Two things had to be engineered:
 
 - **Rule coverage.** The first version picked a rule and *then* checked whether
@@ -881,6 +895,39 @@ differs in kind.
 
 A 4.4x gain on the transfer set — theorems from my generator that RL never
 sampled — and **nothing at all** on the two external benchmarks.
+
+**Transfer set broken down by length**, with the frozen-model control:
+
+![Transfer by length with frozen control](figures/fig11_transfer_by_length.png)
+
+*Figure 11. Greedy solve rate on the transfer set against the generating length
+of each theorem, with Wilson intervals. RL (red) is above the frozen control
+(grey) at every length, and the gap does not close as theorems get longer. The
+x-axis is the length of the proof the theorem was **generated** with, which is
+an upper bound on its shortest proof, not its difficulty -- so the flatness of
+both curves is expected and is itself evidence that generating length is a weak
+difficulty signal.*
+
+| generating length | Stage 1 (frozen) | after RL |
+|---|---|---|
+| 9 | 8/92 = 8.7% | **31/92 = 33.7%** |
+| 10 | 9/97 = 9.3% | **24/97 = 24.7%** |
+| 11 | 4/88 = 4.5% | **17/88 = 19.3%** |
+| 12 | 6/102 = 5.9% | **33/102 = 32.4%** |
+| 13 | 3/94 = 3.2% | **22/94 = 23.4%** |
+| 14 | 5/111 = 4.5% | **23/111 = 20.7%** |
+| 15 | 6/96 = 6.2% | **19/96 = 19.8%** |
+| 16 | 6/120 = 5.0% | **37/120 = 30.8%** |
+
+**Found-proof-length histogram across rounds:**
+
+![Found lengths across rounds](figures/fig12_found_lengths_rounds.png)
+
+*Figure 12. Distinct verified proofs by written length, cumulative, one series
+per RL round (log scale). Mass builds first at 7, then 8, then 9 -- each round
+makes the next length reachable, which is the bootstrap made visible. The frozen
+control's equivalent histogram after five rounds stops at 8 with a single
+proof.*
 
 The diagnosis is in the failure types. Classifying every greedy failure:
 
