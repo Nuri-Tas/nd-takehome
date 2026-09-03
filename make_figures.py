@@ -203,3 +203,41 @@ def fig_energy():
     fig.tight_layout()
     fig.savefig('figures/fig6_energy.png', dpi=160)
     print('figures/fig6_energy.png')
+
+
+def fig_mechanism():
+    """What RL actually changed: it halved the stopping prior at every line."""
+    import json as _j, math as _m
+    q = _j.load(open('numbers_energy.json'))
+    E = _j.load(open('numbers_energy_vs_length.json'))
+    fig, (a1, a2) = plt.subplots(1, 2, figsize=(12, 4.4))
+
+    for name, col, lab in (('stage1', '#888888', 'Stage 1 (before RL)'),
+                           ('after_RL', '#ee6677', 'after RL')):
+        ks = sorted(int(k) for k in q[name])
+        a1.plot(ks, [q[name][str(k)] for k in ks], 'o-', color=col, lw=2, ms=5,
+                label=lab)
+    a1.axvspan(1, 6, color='0.92', zorder=0)
+    a1.text(3.3, 0.72, 'training cap\n(all proofs <= 6 lines)', ha='center',
+            fontsize=9, color='0.35')
+    a1.set_xlabel('lines already written\n(teacher-forced along a VALID 9-16 line proof)')
+    a1.set_ylabel('P(emit QED and stop)')
+    a1.set_title('The mechanism: RL halves the stopping prior')
+    a1.set_ylim(-0.03, 1.03); a1.legend(frameon=False); a1.grid(alpha=0.25)
+
+    for name, col, lab in (('stage1', '#888888', 'Stage 1'),
+                           ('after_RL', '#ee6677', 'after RL')):
+        e = {int(k): v['min'] for k, v in E[name].items() if int(k) >= 2}
+        ks = sorted(e)
+        a2.plot(ks, [e[k] for k in ks], 'o-', color=col, lw=2, ms=5, label=lab)
+    a2.axhline(_m.log(32), color='k', ls='--', lw=1)
+    a2.text(2.1, _m.log(32) * 1.15, 'budget log k at k=32', fontsize=9)
+    a2.set_yscale('symlog', linthresh=1)
+    a2.set_xlabel('proof length L (lines)')
+    a2.set_ylabel('min surprisal E = -log p(proof)  [nats]')
+    a2.set_title('The consequence: the energy cliff moves right\n'
+                 'a proof is sampleable when E <= log k')
+    a2.legend(frameon=False); a2.grid(alpha=0.25)
+    fig.tight_layout()
+    fig.savefig('figures/fig7_mechanism.png', dpi=160)
+    print('figures/fig7_mechanism.png')

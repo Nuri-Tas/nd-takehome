@@ -361,6 +361,16 @@ Both facts belong in the report: the contamination was real and had to be
 removed, and removing it did not move the validation number.
 
 
+## Where to find the full derivations
+
+`PRIMER.md` builds the whole setting from scratch with no assumed background:
+what a proof and a sequent are, how each dataset is constructed, the token
+scheme, the architecture and forward pass with shapes, targets and loss, the
+optimiser, what reinforcement learning is and which part of it is used here, a
+critique of the `L - P` metric, the causal mechanism by which RL produces longer
+proofs, and the exact Boltzmann correspondence with its limits. Figures 1, 6 and
+7 are the visual companions to it.
+
 ## Glossary
 
 Every term this write-up depends on, defined once.

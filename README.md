@@ -1,11 +1,3 @@
-# Reproducing every number
-
-Hardware: 1x NVIDIA H200 (shared box, 4 GPUs; pin one with `CUDA_VISIBLE_DEVICES`).
-Driver CUDA 12.8, torch 2.11+cu128, Python 3.11.
-
-The machine has 192 cores and torch thread-thrashes on it, so **every command
-below sets `OMP_NUM_THREADS=8`**. Without it, dataset encoding and sampling run
-an order of magnitude slower.
 
 ## Setup
 
@@ -19,6 +11,16 @@ uv pip install --python .venv/bin/python numpy tqdm
 (`torch.backends.cuda.enable_cudnn_sdp(False)`). On this driver that backend
 both crashes at batch 2048 and runs ~60x slower than the alternatives; see
 `log.md`. Leave it disabled.
+
+
+## Our Hardware
+Hardware: 1x NVIDIA H200 
+Driver CUDA 12.8, torch 2.11+cu128, Python 3.11.
+
+The machine has 192 cores and torch thread-thrashes on it, so **every command
+below sets `OMP_NUM_THREADS=8`**. Without it, dataset encoding and sampling run
+an order of magnitude slower.
+
 
 ## Stage 1 -- data and supervised training
 
@@ -115,6 +117,7 @@ No per-theorem inspection of the test set, no tuning against it.
 
 | path | what |
 |---|---|
+| `PRIMER.md` | **start here if the domain is unfamiliar** -- proofs, datasets, tokens, architecture, loss, optimiser, RL, the metric, and the statistical-physics formulation, built from scratch with no assumed background |
 | `writeup.md` | the report: executive summary, per-stage method, limitations |
 | `numbers.md` | every number in the write-up, with its source file |
 | `log.md` | dated log, in order, including dead ends and corrections |
