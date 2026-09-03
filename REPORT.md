@@ -542,39 +542,6 @@ model**.
 Oracle written lengths run to 17:
 `{7:333, 8:428, 9:357, 10:166, 11:140, 12:63, 13:57, 14:26, 15:8, 16:7, 17:2}`.
 
-**Three things follow, and the first is uncomfortable for the headline.**
-
-1. **The objection is correct: gold data is far better than RL.** Frontier 16
-   versus 9-10. RL recovered roughly a quarter to a third of the gap between the
-   Stage-1 baseline (7) and what supervision on real long proofs achieves (16).
-   The bottleneck in this setting is *data*, and expert iteration is an
-   inefficient way to manufacture it.
-2. **But that data does not exist.** The exam caps supervised training at 6 lines
-   precisely to remove it, and outside a synthetic setting there is no oracle
-   handing you longer proofs. RL's contribution is not that it beats gold data;
-   it is that it produces *some* of the same effect **from nothing but the model
-   and a checker**.
-3. **The mechanism is identical in both arms**, which is the strongest evidence
-   that the diagnosis is right:
-
-| model | P(stop) after 9 lines | robust frontier |
-|---|---|---|
-| Stage 1 (cap-6 data) | **0.965** | 7 |
-| after RL (self-found 6-8 line proofs) | **0.366** | 9-10 |
-| oracle SFT (gold 9-16 line proofs) | **0.109** | 16 |
-
-![Stopping prior across rounds, and the oracle bound](figures/fig9_rounds_qed.png)
-
-*Figure 9. Left: every RL round lowers the stopping probability at every length;
-the oracle model trained on gold long proofs (dashed) sits far below all of
-them. Right: the frontier tracks this single number monotonically across three
-very different training regimes.*
-
-The frontier is a monotone function of one scalar — the probability of stopping —
-and that scalar is **set by the length distribution of the training data**. RL
-changes it by manufacturing longer training examples; gold data changes it more
-because the examples are longer still. Nothing else about the three models
-differs in kind.
 
 ### 9.5 And none of it transfers
 
