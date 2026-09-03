@@ -28,6 +28,8 @@ The conservative headline both seeds support is **L - P >= 2**; seed 1 reached
 it. On hand-curated textbook theorems it buys nothing.** The second half is the
 more useful finding, and findings 1 and 5 below say why the two came apart.
 
+![Stopping prior](figures/fig1_stopping_prior.png)
+
 **1. The barrier is a learned stopping prior, not reasoning and not
 tokenisation.** (figure 1) Teacher-forced along a *known-good* 9-16 line proof,
 the Stage-1 model still wants to stop: P(QED) is 0.02 after line 5, 0.32 after
@@ -36,6 +38,8 @@ sampling means beating ~0.95-0.99 stop probability at every boundary past 6, and
 that product is why the ceiling is a hard stop rather than a decay. This is the
 constraint on *how far* past the cap the model reaches, once it can reach past
 the cap at all -- which is a separate question, answered by finding 2b.
+
+![Reference codec](figures/fig5_codec.png)
 
 **2a. The reference tokenisation decides whether length generalisation happens
 at all.** (figure 5) Trained on identical data with an identical architecture,
@@ -48,6 +52,8 @@ held-out greedy), so measuring held-out accuracy alone would have hidden the
 entire effect. Absolute indices leave 43.7% of the index/reference tokens in a
 9-16 line proof untrained; relative ones leave 8.1%.
 
+![Written lengths by positional scheme](figures/fig2_written_lengths.png)
+
 **2b. The positional scheme is not the barrier.** (figure 2) Learned absolute
 position embeddings are untrained past the longest training sequence (194
 tokens), which looked like the obvious culprit. Three Stage-1 models --
@@ -57,12 +63,16 @@ held-out rate (95-96%), and **all three stop at exactly 7 written lines** across
 `rope` has the weakest stopping prior at every line and writes twice as many
 7-line proofs (351 vs 177 vs 129). Mechanism predicts data.
 
+![Length illusion](figures/fig4_length_illusion.png)
+
 **3. Generating length is not difficulty, and ignoring that would have faked
 the whole result.** (figure 4) My first RL pool was 4000 theorems generated with
 7-16 line proofs. The Stage-1 model solved **2706 of them from a single
 sample**, writing 3-6 line proofs. Re-generating 30,000 candidates at 9-16 lines
 and searching each, **26,941 (90%) turned out to be provable in 6 lines or
 fewer**. Only after filtering does "beyond 6" mean anything.
+
+![RL vs frozen control](figures/fig3_rounds.png)
 
 **4. RL beats resampling by a wide margin -- inside its own distribution.**
 (figure 3) Against a frozen Stage-1 model given exactly the same attempts per
@@ -242,6 +252,10 @@ particular proof when `k * p(y) >~ 1`, i.e.
 
 The frontier is then `L*(k) = max{ L : E_min(L) <= log k }`, where `E_min(L)` is
 the smallest total surprisal among verified `L`-line proofs.
+
+![Energy cliff and budget](figures/fig6_energy.png)
+
+![Mechanism: RL flattens the stopping prior](figures/fig7_mechanism.png)
 
 Measuring `E_min(L)` directly (teacher-force every verified proof in the RL
 pool, sum `-log p` over the body):

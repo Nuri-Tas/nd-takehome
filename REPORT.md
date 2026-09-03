@@ -1,0 +1,896 @@
+# Bootstrapping a natural-deduction prover past its training length
+
+**A complete report.** Part I assumes no background at all and builds the
+setting from scratch. Part II describes what was built. Part III reports what
+was measured. Every figure is inline; every number points at the file that
+produced it.
+
+---
+
+# PART I — THE SETTING, FROM ZERO
+
+## 1. What is being asked
+
+Train a small neural network on examples of *short* mathematical proofs — never
+longer than 6 steps. Then use reinforcement learning to make it produce *longer*
+proofs than any it was trained on, and measure how much longer.
+
+The score is a single number, `L - P`:
+
+- **P** = the longest proof the model could reliably write *before* RL
+- **L** = the longest proof it can reliably write *after* RL
+
+Everything below exists to make that number mean something.
+
+## 2. Logic, from nothing
+
+### 2.1 Formulas
+
+A **formula** is a statement built from:
+
+| symbol | name | reads as |
+|---|---|---|
+| `P` `Q` `R` `S` | atoms | placeholder statements, each true or false |
+| `F` | falsum | a statement that is always false (a contradiction) |
+| `~` | negation | "not" |
+| `&` | conjunction | "and" |
+| `v` | disjunction | "or" (at least one) |
+| `>` | implication | "if ... then ..." |
+
+So `( R v S )` reads **"R or S"** — it claims at least one of them is true.
+`( P > Q )` reads **"if P then Q"**. Everything compound is fully
+parenthesised, so there is never any ambiguity about what groups with what.
+
+The atoms are just labels. `P` could stand for anything; what matters is only
+how the symbols combine.
+
+One subtlety: `>` is *material* implication, defined purely by a truth table.
+`( A > B )` is false in exactly one case — `A` true and `B` false. So "if the
+moon is cheese then I am a fish" is **true**, because the first part is false.
+There is no notion of causation or relevance.
+
+### 2.2 Sequents: the thing to be proved
+
+A **sequent** is a claim of the form
+
+    premises  |-  conclusion
+
+`|-` is called the turnstile. It asserts: *whenever all the premises are true,
+the conclusion is true too.* For example
+
+    ( P > Q ) , P  |-  Q
+
+says: given "if P then Q" and given "P", it follows that "Q". This is true, and
+your job is to *demonstrate* it.
+
+**Premises are given to you for free.** They are the starting material, not the
+work.
+
+### 2.3 A proof, completely decomposed
+
+A **proof** is a numbered list of small steps, each one checkable by a machine
+that understands nothing. Here is a complete, verifier-accepted proof of the
+sequent above:
+
+    THM ( P > Q ) , P SEQ Q PRF
+    N1  ( P > Q )  :  PR ;
+    N2  P          :  PR ;
+    N3  Q          :  IMPE N1 N2 ;
+    QED
+
+The header names the problem: `THM` marks the premises, `SEQ` marks the goal,
+`PRF` says the proof begins. `QED` ends it. These are punctuation.
+
+Now one line, fully taken apart:
+
+    N3      Q      :      IMPE      N1 N2      ;
+    │       │      │       │          │        │
+    │       │      │       │          │        end of line
+    │       │      │       │          └─ REFERENCES: which earlier lines I use
+    │       │      │       └─ RULE: which logical move I am making
+    │       │      └─ separator; read it as "because"
+    │       └─ FORMULA: what this line claims is true
+    └─ INDEX: this is line 3
+
+Read aloud: **"Line 3 claims Q, because I applied the rule IMPE to lines 1
+and 2."**
+
+**Why references are mandatory.** The rule `IMPE` needs two specific inputs: an
+implication, and the thing on its left. Writing `Q : IMPE` alone would leave the
+checker unable to verify anything — it must know *which* implication you claim
+to be using. References make the claim checkable.
+
+They are also the fragile part. Swapping them breaks the proof while everything
+else still looks fine:
+
+    N3 Q : IMPE N1 N2 ;   ->  accepted
+    N3 Q : IMPE N2 N1 ;   ->  REJECTED: "rule check failed: IMPE (line 3)"
+
+`IMPE` requires the implication first. `N2` is `P`, which is not an implication.
+This exact failure mode — a well-formed line citing the wrong things — accounts
+for **78-90% of the model's errors** in every experiment below.
+
+### 2.4 The rules, and why they come in pairs
+
+There are fifteen rules. The organising principle: **for each connective, one
+rule builds it and one rule uses it.**
+
+| connective | INTRODUCTION (build it) | ELIMINATION (use it) |
+|---|---|---|
+| `&` and | `ANDI`: from `A` and `B`, get `( A & B )` | `ANDE1`/`ANDE2`: from `( A & B )`, get `A` or `B` |
+| `v` or | `ORI1`/`ORI2`: from `A`, get `( A v X )` | `ORE`: from `( A v B )`, argue by cases |
+| `>` if | `IMPI`: assume `A`, reach `B`, get `( A > B )` | `IMPE`: from `( A > B )` and `A`, get `B` |
+| `~` not | `NEGI`: assume `A`, reach `F`, get `( ~ A )` | `NEGE`: from `A` and `( ~ A )`, get `F` |
+| `F` | — | `BOTE`: from `F`, get **anything** |
+
+**This pairing is not a coincidence; it is the definition of each connective.**
+`ANDI` states what it takes to earn `( A & B )` — you must have both parts.
+`ANDE` states what you are entitled to once you have it — either part. Those two
+rules together *are* the meaning of "and". You never consult a truth table.
+
+That is what makes the system "natural": each rule mirrors a move you would make
+in ordinary argument, and each connective is defined by how you introduce and
+eliminate it.
+
+`ORI2` in the example earlier is "or-introduction, right variant": from `A`,
+conclude `( X v A )` for any `X`. If you know it is raining, you may conclude
+"it is snowing **or** it is raining" — true, because the right half is.
+
+`BOTE` deserves a note: from a contradiction, *anything* follows. This is why
+`( P & ( ~ P ) ) |- Q` is provable for any `Q`.
+
+### 2.5 Subproofs — the "boxing" thing
+
+Here is the problem boxes solve. Prove this, **with no premises at all**:
+
+    |-  ( P > P )        "if P then P"
+
+Nothing is given. There is no line to cite. Where do you even start?
+
+**You make a temporary supposition.** Say: *"suppose P were true — what
+follows?"* Trivially, `P` follows. So you have shown "assuming P, you get P",
+which is exactly what `( P > P )` claims.
+
+The **box** marks the region where the supposition is in force. Depth is written
+with `|`:
+
+    N1 | P         : AS ;           <- OPEN the box. "SUPPOSE P."  Not asserted.
+    N2 ( P > P )   : IMPI N1 N1 ;   <- CLOSE the box. Now asserted outright.
+
+Line 1 carries `|`, so it is inside the supposition — it does **not** claim `P`
+is true. Line 2 has no `|`: it is back outside, and it *is* an unconditional
+claim.
+
+`AS` opens a box ("assume"). `IMPI` closes it, converting *"assuming A I reached
+B"* into the free-standing claim `( A > B )`. It cites the box's first and last
+line — here `N1 N1`, since the box is one line long.
+
+A longer example:
+
+    N1 | ( ~ ( ~ Q ) )        : AS ;         <- suppose "not not Q"
+    N2 | Q                    : DN N1 ;      <- inside: double negation
+    N3 ( ( ~ ( ~ Q ) ) > Q )  : IMPI N1 N2 ; <- close: "if not-not-Q then Q"
+
+**The scope rule.** From inside a box you may cite lines *outside* it — facts
+established before you supposed anything are still facts. But once a box closes,
+**its interior is sealed permanently**. You may cite the box as a whole (that is
+what `IMPI N1 N2` does), never a line within it.
+
+Why: lines inside the box were only warranted *given the supposition*. If you
+could still cite them after dropping the supposition, you could "prove" anything:
+
+    N1 | P : AS ;      suppose P
+    N2 P : ...         <- if this were legal, P is proved from nothing
+
+This is the only non-local bookkeeping in the format, and it is why the three
+box-closing rules (`IMPI`, `NEGI`, `ORE`) are harder for a model than the other
+twelve. `ORE` is hardest: it needs **two** boxes — one per case — that both
+reach the same conclusion.
+
+### 2.6 Proof length, and why the whole project turns on it
+
+The **length** of a proof is its number of lines, premises included. The proof
+in §2.3 has length 3.
+
+Why this is the difficulty axis: a proof is a chain. If the model gets each step
+right with probability `p`, an `n`-step proof is right with probability roughly
+`p^n`. Errors compound **multiplicatively**. Length is therefore a difficulty
+measure that is an integer, reported by the verifier, and impossible to argue
+about.
+
+**Critical distinction: a theorem does not have a length; a proof does.** The
+same theorem may have a 12-line proof and a 4-line one. This is not pedantry — I
+generated 30,000 theorems using proofs of 9-16 lines and found that **26,941 of
+them (90%) are provable in 6 lines or fewer**.
+
+![Generating length is not difficulty](figures/fig4_length_illusion.png)
+
+*Figure 4. Of 30,000 theorems generated with 9-16 line proofs, 90% turn out to
+have a proof of 6 lines or fewer. Treating "the proof I generated it with" as
+"how hard the theorem is" would have produced a large, meaningless result. The
+10% that survive a search-based filter are the RL targets.*
+
+### 2.7 The verifier
+
+`nd_verify.verify_text(text)` returns `(accepted, reason, n_lines)`. It is a
+**decision procedure**: deterministic, linear time, always terminates, no notion
+of "nearly correct".
+
+How it works:
+
+1. **Parse** each line into `(index, depth, formula, rule, references)`.
+2. **Replay the box structure.** Maintain a stack of open boxes. Record for each
+   line the set of boxes open at that point — call it the line's *scope*.
+3. **Structural checks.** Indices consecutive; premises reproduced exactly and
+   in order; last line at depth 0 and equal to the conclusion.
+4. **Per-line rule checks.** Line `j` may be cited from line `i` exactly when
+   `j < i` **and** `scope(j)` is a prefix of `scope(i)`. That single condition
+   encodes the entire scope discipline. Then the rule's precondition is checked
+   as a pattern match on the cited formulas.
+
+**The asymmetry that makes this project possible:** checking a proof is linear
+time; *finding* one is the hard direction (propositional validity is
+coNP-complete). A free, perfect, instant judge for something genuinely hard to
+produce — that gap is the engine of everything in Part II.
+
+---
+
+# PART II — WHAT WAS BUILT
+
+## 3. The datasets
+
+Six datasets. Understanding which is which is essential to reading the results.
+
+| dataset | size | where it comes from | what it is for |
+|---|---|---|---|
+| `train` | 116,316 | my generator, proofs 2-6 lines | supervised training |
+| `heldout` | 3,000 | my generator, **disjoint theorems** | does it generalise in-distribution? |
+| `rl_targets_hard` | 1,994 | my generator, 9-16 lines, filtered hard | RL practises on these |
+| `transfer_hard` | 800 | same, **RL never sees these** | does RL generalise? |
+| `validation_36` | 36 | **written by the task authors** | external check, textbook theorems |
+| `test_short/long` | 267 + 532 | **written by the task authors** | scored once, like a leaderboard |
+
+### 3.1 How training data is generated
+
+The key decision. Two options existed:
+
+1. sample a *theorem*, then search for a proof — needs a prover, and can produce
+   unprovable theorems;
+2. sample a *proof*, then read off which theorem it proves.
+
+I do **(2)**: start from random premises, repeatedly apply a randomly chosen
+*applicable* rule, and whatever the last line says is a theorem you have just
+proved. **Correctness is free by construction** — no search, no possibility of
+an invalid proof. Every proof is still re-checked by the real verifier.
+
+Result: **18,396 of 18,396** generated proofs pass the verifier. Zero invalid.
+About 5,400 proofs per second.
+
+Two things had to be engineered:
+
+- **Rule coverage.** The first version picked a rule and *then* checked whether
+  it applied, so rarely-applicable rules starved — `ORE` appeared 35 times in
+  20,000 proofs. Enumerating *applicable* rules first took `IMPE` from 227 to
+  2,159 and `NEGE` from 457 to 1,512.
+- **Useful premises.** Random premises rarely contain a disjunction or a
+  matching implication/antecedent pair, so the walk had nothing to work with.
+  About 55% of proofs now start from a structured pattern like `[(A>B), A]`.
+
+Box rules cannot arise one step at a time (they need a box opened earlier with
+exactly the right hypothesis), so they are emitted as **macros** that plan the
+whole box: assume, derive, discharge.
+
+### 3.2 What the splits guarantee
+
+- **Disjoint by theorem**: a sequent never appears on both sides of a split.
+- **Decontaminated**: no training theorem is, or is an atom-renaming of, a
+  validation or test theorem. (An *atom-renaming* is the same structure with
+  letters permuted: `(P>Q),P |- Q` versus `(R>S),R |- S`.)
+- Verified by `validate_claims.py`: **0 overlap on every pair**, exact and under
+  renaming.
+
+### 3.3 Difficulty must be measured, not assumed
+
+Since generating length overstates difficulty (§2.6), every RL candidate is
+probed with 24 samples from a trained model and dropped if any sample produces a
+proof of ≤6 lines. Survivors are labelled *"no ≤6-line proof found in 24
+samples"* — an **upper bound**, not a proof of hardness. This is stated as a
+limitation rather than hidden.
+
+## 4. Tokens: turning proofs into numbers
+
+A network consumes numbers, so proof text must become a sequence of integers.
+The vocabulary has **65 symbols**:
+
+    special      <pad> <bos>                                     2
+    formula      ( ) ~ & v > P Q R S F                          11
+    structural   THM , SEQ PRF QED | : ;                         8
+    rule names   ANDI ANDE1 ANDE2 IMPE IMPI ORI1 ORI2 ORE       15
+                 NEGE NEGI BOTE DN PR AS R
+    references   B1..B24                                        24
+                 P1..P6                                          6
+
+### 4.1 The one design decision that mattered
+
+The spec numbers lines absolutely: `N5 ( R v S ) : ORI2 N1 ;`. Under a 6-line
+training cap, the tokens `N7`, `N8`, ... **never appear in training**. At test
+time on a 12-line proof, the model must emit symbols it has never been trained
+to produce.
+
+So I delete the line index (lines are `;`-delimited, so position is recoverable)
+and rewrite references:
+
+- reference to an earlier **derived** line -> `B<k>`, meaning *k lines back*
+- reference to a **premise** -> `P<i>`, meaning *the i-th premise*
+
+Worked example:
+
+    spec format  : N1 ( ( S & P ) > ( P & R ) ) : PR ;
+                   N2 Q : PR ;
+                   N3 ( R v ( ( S & P ) > ( P & R ) ) ) : ORI2 N1 ;
+
+    model format : ( ( S & P ) > ( P & R ) ) : PR ;
+                   Q : PR ;
+                   ( R v ( ( S & P ) > ( P & R ) ) ) : ORI2 P1 ;
+
+Line 3 cites line 1, a premise, so `N1` becomes `P1`.
+
+Premises get their own scheme because they are cited from anywhere in the proof,
+so their back-distance would grow without bound (citing line 1 from line 14
+would be `B13`, as unseen as `N14`). Derived lines are usually cited soon after
+they are made, so back-distances stay small.
+
+**Measured effect** on 9-16 line proofs — fraction of index/reference tokens
+never seen in cap-6 training:
+
+| scheme | unseen |
+|---|---|
+| absolute `N<i>` | **43.7%** |
+| relative `B<k>` / `P<i>` | **8.1%** |
+
+A 5.4x reduction, **not** elimination — training only ever uses `B1`-`B4`, while
+long proofs genuinely need `B5`-`B14`. Everything decodes back to spec format
+before the verifier sees it; the round trip is exact on 5,000 proofs.
+
+## 5. The model
+
+A **decoder-only transformer** — the GPT architecture. "Decoder-only" means it
+reads a token sequence and, at every position, predicts the *next* token, with
+each position able to see only earlier ones.
+
+4 layers, width 256, 4 attention heads, **3.18M parameters**, trained from
+scratch.
+
+### 5.1 The forward pass, with shapes
+
+For a batch of `B` sequences of length `T`:
+
+    ids                  [B, T]           integers 0..64
+      | look up in a [65, 256] embedding table
+    h                    [B, T, 256]      one 256-dim vector per token
+      | add positional information (5.2)
+      |
+      |  --- repeat 4 times ------------------------------------
+      |   Q, K, V = LayerNorm(h) @ W        [B, 4 heads, T, 64]
+      |   scores  = Q @ K^T / sqrt(64)      [B, 4, T, T]
+      |   scores += causal mask             (-inf above the diagonal)
+      |   attn    = softmax(scores) @ V     [B, 4, T, 64]
+      |   h = h + attn @ W_out              (residual)
+      |   h = h + MLP(LayerNorm(h))         MLP: 256 -> 1024 -> GELU -> 256
+      |  --------------------------------------------------------
+      |
+    logits = LayerNorm(h) @ E^T             [B, T, 65]
+
+- **Attention** is a weighted average of value vectors; the weight from position
+  i to j measures how much `Q_i` aligns with `K_j`. It is the mechanism by which
+  line 9 can depend on line 2.
+- **Causal mask** sets weights to future positions to zero, so one forward pass
+  gives a prediction at *every* position while remaining a valid left-to-right
+  model.
+- **Residual connections** (`h = h + ...`) keep gradients flowing through depth.
+- **LayerNorm** rescales each position's vector; it stabilises optimisation.
+- `E` is the **same** embedding table used at the input ("tied embeddings"),
+  saving parameters and tying a token's representation to the direction that
+  predicts it.
+
+### 5.2 Positional schemes: learned, RoPE, NoPE
+
+Attention as written is **order-blind**: `Q @ K^T` does not know which token came
+first. Position must be injected. Three ways, all of which I trained:
+
+| scheme | how | weakness |
+|---|---|---|
+| **learned** | a second lookup table, one trainable vector per position, added to the token embedding (this is what GPT-2 does) | positions beyond the longest training sequence (194 tokens) **never receive a gradient** — they are untrained noise |
+| **RoPE** (rotary) | no parameters. Before attention, rotate `Q` and `K` by an angle proportional to position. The algebra makes `Q_m · K_n` depend only on the *offset* `m - n` | none for length; a gap of 3 looks identical at position 10 or 300 |
+| **NoPE** | inject nothing. A causal decoder can still infer order because position `i` attends over a strictly longer prefix than `i-1` | relies on the model to reconstruct order |
+
+I trained all three specifically to test whether the positional scheme was the
+thing limiting proof length. It was not (§9.2).
+
+### 5.3 Generation, and temperature
+
+At inference: feed the prompt, read the logits at the last position, choose a
+token, append, repeat until `QED`.
+
+**Choosing** the token is where temperature enters. The logits become
+probabilities via `softmax(z / tau)`:
+
+- **greedy** (`tau -> 0`): always take the most likely token. Deterministic —
+  one proof per theorem, the same every time.
+- **`tau = 1.0`**: sample from the model's actual probabilities. **Random** — 32
+  draws give 32 different attempts.
+
+Both are used, for different purposes. Greedy for reported solve rates, because
+it is reproducible. `tau = 1.0` for RL, because expert iteration needs
+*diversity*: if greedy gives one wrong proof, repeating it never helps.
+
+## 6. Training: targets, loss, optimiser
+
+### 6.1 Targets
+
+A **target** is the correct answer at a training position. Because the task is
+next-token prediction, the target at position `i` is simply the token at
+position `i+1`. Inputs and targets are the same sequence shifted by one:
+
+    tokens : <bos> THM ( P > Q ) , P SEQ Q PRF  ...  QED
+    input  : <bos> THM ( P > Q ) , P SEQ Q PRF  ...
+    target :       THM ( P > Q ) , P SEQ Q PRF  ...  QED
+
+Then the prompt is **masked**: targets inside the prompt are set to a sentinel
+meaning "contribute nothing". The prompt is the *question*; we only want the
+model to learn to produce the *answer*. In a 121-token example with a 46-token
+prompt, 75 positions are supervised.
+
+### 6.2 Loss
+
+**Cross-entropy**:
+
+    loss = -(1/N) * sum over supervised positions i of  log p(target_i | inputs so far)
+
+Minimising this is exactly maximum likelihood — make the observed proofs as
+probable as possible under the model.
+
+Concretely: a validation loss of 0.077 means the model assigns on average
+`exp(-0.077) = 0.926`, about **93%**, to the correct next token.
+
+**Loss is not the metric that matters.** A proof is correct only if *every*
+token is right. A model can have excellent average loss and still write invalid
+proofs. Every solve rate in this report is measured by the verifier, never by
+loss.
+
+### 6.3 Optimiser
+
+**AdamW**: learning rate 3e-4, betas (0.9, 0.95), weight decay 0.1, gradient
+clipping at norm 1.0, batch 256, 6,000 steps.
+
+Adam keeps running averages of each parameter's gradient (first moment) and its
+square (second moment), and steps in the direction of the first divided by the
+square root of the second — so parameters with consistently small gradients
+still move at a useful rate. The "W" means weight decay is applied directly to
+the weights rather than folded into the gradient.
+
+Schedule: 200 steps of linear warm-up (to avoid large steps while the moment
+estimates are still noisy), then cosine decay to zero.
+
+Wall clock: **278 seconds** on one H200.
+
+## 7. Reinforcement learning
+
+### 7.1 RL versus supervised learning — the actual difference
+
+**Supervised learning.** You have a fixed dataset of correct answers and
+minimise
+
+    L(theta) = - sum over examples of  log p_theta(correct answer | question)
+
+The data does not depend on the parameters. Someone else supplied the answers.
+
+**Reinforcement learning.** Nobody supplies the answer. You have a **reward**
+function `r(x, y)` and maximise
+
+    J(theta) = E over y sampled from p_theta [ r(x, y) ]
+
+The expectation is over **your own model's output distribution**. That is the
+structural difference: the training data is generated by the thing being
+trained, so improving the model changes the data, which changes the gradient.
+
+Mapping onto this project:
+
+| RL term | here |
+|---|---|
+| policy | the language model `p_theta(proof \| theorem)` |
+| action | emitting a token (or, coarsely, a whole proof) |
+| reward | 1 if the verifier accepts the proof of the prompted sequent, else 0 |
+| episode | one sampled proof attempt |
+
+The reward is **verifiable**: computed by a program, exact, instant, free, with
+no human and no learned reward model. This family is called **RLVR**,
+reinforcement learning with verifiable rewards.
+
+### 7.2 Expert iteration — the algorithm used here
+
+I do **not** use policy gradients (PPO, GRPO, REINFORCE). I use **expert
+iteration**, also called rejection-sampling fine-tuning or STaR. One **round**:
+
+    for each of the ~2000 target theorems:
+        sample k = 32 attempts at temperature 1.0      <- exploration
+        run each through the verifier                   <- reward
+        keep the accepted ones                          <- rejection sampling
+    pool <- pool + kept proofs
+    policy <- finetune(Stage-1 weights, pool + 20k Stage-1 examples)
+
+Five rounds, about 135 seconds each.
+
+**This is expectation-maximisation.** Treat the proof `y` as a latent variable
+and "success" as the observation:
+
+    E-step:  q(y)  proportional to  p_theta(y|x) * r(x,y)     posterior over proofs given success
+    M-step:  theta' = argmax  E_q [ log p_theta'(y|x) ]
+
+Sampling k times and training on the successes *is* a Monte-Carlo E-step
+followed by an exact M-step. It maximises a lower bound on
+`log p_theta(success | x)`.
+
+Compared with policy gradient:
+
+| | policy gradient | expert iteration |
+|---|---|---|
+| uses failures | yes (negative advantage) | **discards them** |
+| estimator variance | high; needs baselines, clipping | none — it is supervised |
+| off-policy reuse | needs importance ratios | the pool persists across rounds |
+| information used | full reward signal | binary filter only |
+
+It throws away the information in failures and buys stability in return. With a
+*perfect* verifier and cheap sampling, that is a good trade.
+
+Three implementation choices:
+
+- **Restart from the Stage-1 weights each round**, not from the previous policy.
+  Prevents drift; keeps each round comparable.
+- **Mix in Stage-1 data** so short-proof ability is not forgotten.
+- **Hindsight relabelling**: a rejected attempt is often a valid proof of a
+  *different* theorem. Read that theorem off the proof (its `PR` lines are the
+  premises, its last line the conclusion), verify it, and add it to the pool.
+
+### 7.3 The frozen control — why any of this is a claim
+
+A copy of the Stage-1 model receives **exactly the same number of attempts every
+round** and is never retrained.
+
+This is not bookkeeping; it is the entire basis for believing the result.
+Sampling 32 times is *itself* a search. Without the control, "RL solved N
+theorems" might mean only "we sampled a lot".
+
+Verification that the arms are matched: at round 1 the policy **is** the frozen
+model, and they solve 463 vs 440 of 1,994 — equal within noise. Had they
+diverged there, every later comparison would be meaningless.
+
+## 8. The metric
+
+### 8.1 Definition
+
+Fix a sampling protocol. The **robust frontier** of a model is
+
+    the largest n such that the model produced at least 5 DISTINCT
+    verifier-accepted proofs whose written length is exactly n
+
+Three words carry weight:
+
+- **written** — the length of the proof the model emitted, never the length of
+  the proof the theorem was generated with (§2.6);
+- **distinct** — different (theorem, proof-text) pairs. At `tau = 1` the model
+  resamples its favourite proof constantly; one proof drawn 200 times is one
+  proof, not a capability;
+- **at least 5** — a single lucky long proof is an anecdote. Stage 1 produced
+  exactly one 8-line proof in ~64,000 samples; its frontier is therefore 7.
+
+`P` is the frontier before RL, `L` after, and the score is `L - P`.
+
+### 8.2 An honest problem with this metric
+
+**`L - P` is a difference, so making `P` small inflates it.** A deliberately
+undertrained Stage-1 model would leave RL more headroom and score *better*. That
+is a genuine perverse incentive and no framing removes it.
+
+Three things constrain it without solving it:
+
+1. The 6-line cap is fixed by the rules, so `P` cannot be inflated upward either.
+2. Baseline quality must be reported. Mine scores **97.1%** held-out against the
+   brief's stated ≥85% reference, so `P = 7` is visibly not a depressed baseline.
+3. The frozen control makes the comparison *within-model*: `L` is measured
+   against the same weights at the same budget.
+
+There is also a countervailing force: RL bootstraps *from* Stage 1, so a model
+too weak to write valid proofs gives expert iteration nothing to filter, and `L`
+collapses along with `P`. Gameable at the margin, not arbitrarily.
+
+**A second limitation deserves equal weight: `L - P` is a length metric.** It
+measures how many steps a model can chain, not whether it can prove theorems of
+unfamiliar shape. §9.5 shows these come apart completely.
+
+---
+
+# PART III — WHAT WAS MEASURED
+
+## 9. Results
+
+### 9.1 Stage 1: the starting point
+
+4 layers, 3.18M parameters, 6,000 steps, 278 seconds. Validation loss 0.081.
+
+| metric | value |
+|---|---|
+| held-out greedy (n=1500) | **97.1%** [96.1-97.8] |
+| by proof length 2/3/4/5/6 | 100.0 / 98.4 / 97.8 / 97.9 / **92.0**% |
+| non-trivial theorems only | 96.4% |
+| `validation_36` | 6/36 — bin ≤6: 6/12, bin >6: **0/24** |
+| **P (robust frontier)** | **7** |
+
+The brief's reference for a well-trained model is ≥85%, so Stage 1 is healthy.
+It solves nothing at all beyond 6 lines on the external validation set.
+
+### 9.2 What limits proof length? Three hypotheses
+
+**Hypothesis 1 — the reference codec.** Absolute line indices `N7`+ are untrained
+under a 6-line cap. **CONFIRMED, and it is the largest effect found.**
+
+![The codec gates length generalisation](figures/fig5_codec.png)
+
+*Figure 5. Two models, identical data, identical architecture, identical seed —
+only the proof codec differs. The absolute-index model (grey) writes **zero**
+proofs longer than 6 lines in ~64,000 samples: its frontier is exactly the
+training cap. The relative-reference model (red) writes 352 proofs past the cap.
+Right panel gives the reason: absolute indices leave 43.7% of a long proof's
+index tokens untrained, relative references leave 8.1%.*
+
+Note the trap: the absolute model is **better** in-distribution (96.6% vs 96.3%
+held-out). Tracking only accuracy would have said the codec was irrelevant.
+
+**Hypothesis 2 — the positional scheme.** Learned position embeddings are
+untrained past 194 tokens. **FALSIFIED.**
+
+![All three positional schemes stop at 7](figures/fig2_written_lengths.png)
+
+*Figure 2. `learned`, `rope` and `nope` reach the same validation loss (~0.077)
+and the same held-out rate (95-96%), and **all three stop at exactly 7 written
+lines**. The scheme shifts how many 7-line proofs get written (rope 351, learned
+177, nope 129) but not where the wall is.*
+
+**Hypothesis 3 — a learned stopping prior.** **SUPPORTED**, and it explains the
+rest.
+
+![The stopping prior](figures/fig1_stopping_prior.png)
+
+*Figure 1. Each model is teacher-forced along a **known-valid** 9-16 line proof
+and asked, at each line boundary, whether to stop. Even mid-way through a proof
+it is being shown is correct, Stage 1 wants to emit `QED` with probability 0.32
+after line 6, 0.74 after line 7, and above 0.93 by line 9. To write a 10-line
+proof by sampling it must decline to stop four times in a row — a product of
+small numbers, which is why the ceiling is a hard stop rather than a gradual
+decline. Note that `rope` has the weakest prior at every line, which correctly
+predicted that it would write the most 7-line proofs.*
+
+### 9.3 Expert iteration works, and the control proves it
+
+![RL versus the frozen control](figures/fig3_rounds.png)
+
+*Figure 3. Five rounds. Left: cumulative fraction of RL targets solved — the
+policy climbs to 54.7% while the frozen control, given exactly the same number
+of attempts, reaches 31.2%. Middle: the transfer set, which RL never samples,
+goes from 21% to 49.8% while the control stays flat near 21% — so this is
+generalisation, not memorisation of the targets. Right: the robust frontier
+steps 7 -> 8 -> 9 while the control never leaves 7.*
+
+Two independent seeds:
+
+| | seed 0 | seed 1 | frozen |
+|---|---|---|---|
+| RL targets solved | 54.7% | 53.2% | 31.2% / 30.2% |
+| transfer set | 49.8% | 48.4% | 20.2% / 21.6% |
+| held-out (in-distribution) | 96.8% | 96.4% | (Stage 1: 97.1%) |
+| **robust frontier** | **9** | **10** | **7** |
+| distinct 8-line proofs | 547 | 611 | **1 / 0** |
+| distinct 9-line proofs | 32 | 106 | 0 |
+| distinct 10-line proofs | 1 | 10 | 0 |
+
+**L = 9-10, P = 7, so `L - P` = 2-3.** The conservative claim both seeds support
+is **`L - P` ≥ 2**. The frozen control produced a *single* 8-line proof across
+five rounds and no 9-line proofs at all.
+
+### 9.4 Why: RL flattens the stopping prior
+
+![Mechanism and consequence](figures/fig7_mechanism.png)
+
+*Figure 7. Left: RL roughly halves the stopping probability at every line — at
+line 9 it falls from 0.94 to 0.49. Right: the consequence in energy terms. The
+minimum surprisal of the cheapest verified L-line proof is flat and then
+**cliffs**; RL moves that cliff from between 7 and 8 to past 9. A proof is
+sampleable when its surprisal falls below the budget `log k` (dashed line).*
+
+This is the causal chain, and each link is measured:
+
+1. After supervised training, `p(correct 8-line proof)` is small but **nonzero**
+   — `exp(-7.86)`, about 4 in 10,000. Nonzero because the model learned *local*
+   structure and a long proof is a composition of local steps.
+2. Sampling 32 times at `tau = 1` is a **search** that surfaces such rare events.
+3. The verifier labels them **exactly and for free**.
+4. Fine-tuning on an accepted 7-line proof raises its probability — and that
+   training example contains a *decision to continue* at line 6, so the gradient
+   directly lowers `P(QED | 6 lines written)`.
+5. A model fluent at 7 lines has non-trivial probability at 8. Repeat.
+
+Nothing is "forced" and nothing appears from nothing. A learned scalar — the
+probability of stopping at each boundary — moved, because training examples
+containing "continue" pushed it.
+
+### 9.5 And none of it transfers
+
+| | held-out | transfer (greedy) | transfer (32 samples) | validation_36 | val bin >6 | test_short | test_long |
+|---|---|---|---|---|---|---|---|
+| Stage 1 | 97.1% | **5.9%** | 21.9% | 6/36 | 0/24 | 47.6% | 8.8% |
+| after RL | 96.3% | **25.8%** | 49.6% | 4/36 | 0/24 | 46.4% | 8.1% |
+
+A 4.4x gain on the transfer set — theorems from my generator that RL never
+sampled — and **nothing at all** on the two external benchmarks.
+
+The diagnosis is in the failure types. Classifying every greedy failure:
+
+| failure class | validation_36, Stage 1 | validation_36, after RL | transfer, after RL |
+|---|---|---|---|
+| **invalid rule application** | **90.0%** | **78.1%** | **85.2%** |
+| valid steps, missed the goal | 3.3% | 12.5% | 11.1% |
+| malformed output | 3.3% | 6.2% | 3.2% |
+
+The binding constraint is **per-line rule-application accuracy on unfamiliar
+formulas** — the model writes a line that is not a valid rule application at
+all, usually by citing the wrong earlier lines. RL improved the rate of complete
+valid proofs on its own distribution and did not improve per-line validity on
+textbook formulas.
+
+### 9.6 Why 9 and not 30: the surprisal budget
+
+Per-token log-probabilities add, so with `E(y) = -log p(y | prompt)`:
+
+    p(y) = exp(-E(y)) / Z          and at temperature tau,  p_tau(y) ~ exp(-E(y)/tau)
+
+This is the Boltzmann distribution — an exact correspondence, not an analogy.
+Sampling `k` times finds a proof when `k * p(y)` is around 1, i.e.
+
+    E(y)  <=  log k          "the surprisal budget"
+
+Measuring the cheapest verified proof at each length:
+
+| L | Stage-1 `E_min` | samples needed | after-RL `E_min` | samples needed |
+|---|---|---|---|---|
+| 2-7 | 0.01-0.30 | ~1 | 0.01-0.13 | ~1 |
+| **8** | **7.86** | **2,590** | **0.05** | 1.05 |
+| **9** | **24.81** | **5.9 x 10^10** | **1.51** | 4.5 |
+
+![The energy cliff and the budget](figures/fig6_energy.png)
+
+*Figure 6. Left: the minimum surprisal of an L-line proof is flat, then cliffs.
+Right: the frontier as a function of sampling budget, predicted versus observed.
+Predictions from `E_min(L) <= log k` match the measured frontier in **11 of 12**
+testable cases across a 64x sweep.*
+
+Three consequences, and they answer "why 9 and not 30":
+
+1. **Sampling is exponentially weak.** `k` enters only as `log k`. Lifting Stage
+   1 from 7 to 8 lines by sampling alone would need ~2,590 samples instead of 1.
+   This is exactly why the frozen control's frontier never moves.
+2. **Training is exponentially strong.** It moves `E` directly, and `E` sits in
+   an exponent. RL cut `E_min(8)` by 7.8 nats — a factor of ~2,400 in
+   probability — at the *same* budget.
+3. **Each further line costs another cliff.** The frontier advances roughly one
+   line per few rounds because each round must pay down a new energy barrier.
+   Reaching 30 would require many more rounds, or a method that attacks the
+   stopping prior directly rather than through sampling.
+
+### 9.7 Why some theorems are easier: the entropy term
+
+A theorem is proved if **any** of its proofs is sampled, so the governing
+quantity is the free energy of the whole proof set:
+
+    p(prove x) = sum over all proofs y of x of exp(-E(y)) = exp(-F(x))
+    F(x)  ~  E  -  log g          where g = number of distinct proofs
+
+![Energy-entropy tradeoff](figures/fig8_degeneracy.png)
+
+*Figure 8. Theorems with only one findable proof have the **best** energy (1.76
+— that single proof is individually very likely) and the **worst** solve rate
+(0.43). Theorems with 32-64 distinct proofs have nearly twice the energy — each
+proof individually less likely — and solve at 0.91. Many mediocre proofs beat one
+good proof, the same reason a macrostate with many microstates dominates a
+partition function. Fitted slopes have the predicted signs (+0.40 and -0.54
+against idealised +1 and -1); the attenuation is because the relation is a
+small-probability linearisation and most solved theorems sit near p = 0.9.*
+
+This is also how the *training distribution* enters. Degenerate theorems (23.1%
+of mine: 16.5% have the conclusion as a premise, 13.2% have ≤2-line proofs) have
+enormous `g` — insert a reiteration, swap `ANDI` argument order, add a vacuous
+`ORI`. They concentrate probability mass at short lengths and contribute nothing
+at long ones, which is a concrete mechanism by which the degenerate fraction
+shapes the stopping prior. **This specific prediction is untested**; confirming
+it requires retraining on non-trivial data and re-measuring.
+
+## 10. What emergence means here
+
+"Capability emergence" sounds like something appearing from nothing. It is not.
+
+    frontier L*(k)  =  max { L : E_min(L) <= log k }
+
+`E_min` is a **continuous** quantity that moves smoothly as training proceeds.
+`L*` is an **integer maximum over a threshold**. So smooth improvement produces a
+metric that jumps. The apparent discontinuity is an artefact of thresholding, not
+a phase transition.
+
+**When it can happen:** when the capability is already latent at nonzero
+probability, when a cheap exact verifier can identify rare successes, and when
+training on those successes moves probability mass toward more of them.
+Bootstrapping requires all three.
+
+**When it cannot:** if `p(correct long proof)` is *actually* zero — if the model
+cannot compose the required steps at all — then no amount of sampling finds a
+success, the pool stays empty, and nothing bootstraps. This is why a strong
+Stage 1 matters: it supplies the nonzero seed probability.
+
+**What is not claimed:** phase transitions, critical exponents, and random-matrix
+spectra do not apply here. Those need a thermodynamic limit, an order parameter,
+and a diverging correlation length. Proof length is of order 10; there is no
+lattice and no criticality. The Boltzmann form and free-energy decomposition are
+exact; the critical-phenomena vocabulary is not, and is deliberately avoided.
+
+## 11. Limitations
+
+- **The gain is 2-3 lines, inside my own distribution only.** External
+  benchmarks do not move.
+- **`L - P` is a length metric.** RL bought the ability to chain more steps on
+  familiar theorem shapes; it did not improve per-line rule accuracy on
+  unfamiliar ones, which is what `validation_36` requires.
+- **The hard pool is filtered, not proved hard.** "No ≤6-line proof found in 24
+  samples" is an upper bound, in the same sense as the repo's own
+  `min_lines_ub`. Re-probing with three models at k=32 still found 532 short
+  proofs on the "hard" pool.
+- **The filter uses the model as its own prover**, so the surviving pool is
+  biased toward what this model family finds hard.
+- **The frontier depends on the sampling protocol.** L = 9-10 is at 32 samples,
+  `tau = 1.0`; greedy gives 8. `P` is measured identically, so `L - P` is
+  apples-to-apples, but neither is a single-shot number.
+- **`E_min` is measured over proofs the model actually produced**, so it is an
+  upper bound on the true minimum over all valid proofs of that length.
+- **Two seeds, one method.** No PPO/GRPO comparison, no inference-time search.
+- **Contamination was found and fixed.** The original Stage-1 training set
+  contained 4 validation and 45 test theorems exactly (34.1% of test_short under
+  atom-renaming). Retraining on decontaminated data changed the validation score
+  not at all — the model solves the identical six theorems — and moved
+  test_short by +0.8pp. Overlap turned out not to be memorisation, but the fix
+  was necessary regardless.
+
+## 12. What I would do next
+
+1. **Attack the stopping prior directly** rather than through RL: condition on a
+   target length, penalise early `QED` at sampling time, or reweight the training
+   length distribution. If the diagnosis is right these should move the frontier
+   far more per unit compute than more rounds.
+2. **Add search**, since per-line validity on unfamiliar formulas is the binding
+   constraint on `validation_36`. Best-first or MCTS over the model's own step
+   proposals, with the verifier as the expansion check.
+3. **Backward goal-directed generation**, so training theorems look more like
+   textbook sequents than random-walk products. The transfer failure is
+   plausibly a data-distribution problem as much as an algorithm problem.
+4. **A bounded search prover**, so "needs more than 6 lines" becomes a proof
+   rather than an upper bound.
+5. **Test the degeneracy prediction** in §9.7 by retraining on non-trivial data.
+
+---
+
+## Appendix: where every number comes from
+
+| artefact | contents |
+|---|---|
+| `numbers.md` | every number in this report, tagged by which pipeline produced it |
+| `log.md` | dated log in order, including dead ends and seven corrections |
+| `PRIMER.md` | the same technical material at greater depth |
+| `validate_claims.py` | 25 structural checks: cap respected, all proofs verify, splits disjoint, tokenizer round-trip exact, `prove.py` interface conformant, frozen control equal-budget |
+| `figures/PROVENANCE.md` | which pipeline each figure came from |
+| `runs/clean_seed0/`, `runs/clean_seed1/` | per-round RL logs and checkpoints |

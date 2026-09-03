@@ -669,6 +669,80 @@ against `log 4 = 1.39`, a 0.12-nat discrepancy.
    Schaeffer et al.'s "mirage" argument about emergent abilities, here in a
    system small enough that both quantities are directly measurable.
 
+
+### 9.6 Degeneracy: the entropy term, and how the data distribution enters
+
+A theorem is proved if **any** of its proofs is sampled, so the governing
+quantity is not the energy of one proof but the free energy of the whole proof
+set `Y(x)`:
+
+    p(prove x) = sum over y in Y(x) of exp(-E(y))  =  exp(-F(x))
+    F(x) = -log sum_y exp(-E(y))
+
+If the reachable proofs have comparable energy this factorises into an
+**energy-entropy decomposition**, with the log-count of proofs playing the role
+of entropy:
+
+    F(x)  ~  E  -  log g(x),        g(x) = |Y(x)| = degeneracy
+
+Measured (`scripts_degeneracy.py`, 800 hard targets, k=64, figure 8):
+
+| g | n | mean p | mean E_min |
+|---|---|---|---|
+| 1 | 180 | 0.432 | 1.763 |
+| 2-3 | 126 | 0.718 | 0.674 |
+| 4-7 | 45 | 0.818 | 0.818 |
+| 8-15 | 26 | 0.718 | 1.342 |
+| 16-31 | 34 | 0.813 | 2.313 |
+| 32-64 | 35 | **0.911** | **3.192** |
+
+**The entropy term is real and can dominate.** Theorems with a single findable
+proof have the *lowest* energy (1.76, i.e. that one proof is individually the
+most likely) and the *worst* solve rate (0.43). Theorems with 32-64 distinct
+proofs have nearly twice the energy -- each proof individually less likely --
+and solve at 0.91. Many mediocre proofs beat one good proof, for the same reason
+a macrostate with many microstates dominates a partition function.
+
+Fitted slopes: `d log p / d log g = +0.397` and `d log p / d E_min = -0.544`,
+against idealised `+1` and `-1`. **Right signs, attenuated magnitudes**, and the
+attenuation is understood rather than ignored:
+
+1. `log p = log g - E` is a small-p linearisation. Most solved theorems sit at
+   p = 0.4-0.9 where `log p` saturates at 0.
+2. The equal-energy assumption is crude. The sum is dominated by the few
+   lowest-energy proofs, so the effective degeneracy is
+   `g_eff = sum exp(-(E_y - E_min)) <= g`.
+3. `g` is censored (distinct proofs found in 64 draws, not `|Y(x)|`) and is
+   estimated from the same draws as `p`, which couples them and would *inflate*
+   the slope. Attenuation despite that coupling means the true attenuation from
+   (1) and (2) is larger than measured.
+
+**This is how the training distribution enters the frontier.** Write the
+frontier as a functional of the data distribution `D` and the budget:
+
+    L*(D, k) = max { L : F_min(L; A(D)) <= log k }
+
+for learning algorithm `A`. Emergence is a property of the *pair* (distribution,
+budget), not of the model alone. Two structural features of `D` matter through
+the entropy term:
+
+- **Degenerate theorems have enormous g.** Insert a reiteration, swap the
+  argument order of `ANDI`, add a vacuous `ORI` -- each gives a distinct proof
+  text of the same theorem. These are symmetry factors in the entropy count,
+  directly analogous to indistinguishable-particle counting. They concentrate
+  partition-function mass at *low* L and contribute nothing at high L.
+- **Long proofs have low degeneracy.** Fewer ways to do a hard thing. So `F`
+  stays high at large L even where `E_min` is moderate, and the frontier stalls.
+
+Concretely: 23.1% of my training theorems are degenerate (16.5% have the
+conclusion as a premise, 13.2% have proofs of <= 2 lines, 1.0% have `F` as a
+premise). The prediction is that this fraction shapes `p_theta` toward short
+proofs -- i.e. it sets where the stopping-prior cliff sits.
+
+**This specific prediction is UNTESTED.** Confirming it requires retraining
+Stage 1 on non-trivial-only data and re-measuring `P(QED)` and `P`. It is
+stated here as a mechanism with a clear falsification, not as a result.
+
 ### 9.5 What does not carry over
 
 The Boltzmann form and the free-energy view (`F(x) = -log sum over proofs of x

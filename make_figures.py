@@ -241,3 +241,38 @@ def fig_mechanism():
     fig.tight_layout()
     fig.savefig('figures/fig7_mechanism.png', dpi=160)
     print('figures/fig7_mechanism.png')
+
+
+def fig_degeneracy():
+    """Energy-entropy tradeoff: many mediocre proofs beat one good proof."""
+    import json as _j
+    d = _j.load(open('numbers_degeneracy.json'))
+    fig, (a1, a2) = plt.subplots(1, 2, figsize=(12, 4.4))
+    lab = [f"{r['g_lo']}-{r['g_hi']}" for r in d]
+    x = range(len(d))
+    a1.bar([i - 0.2 for i in x], [r['p_hat'] for r in d], width=0.4,
+           color='#ee6677', label='solve probability  p')
+    a1.set_ylabel('empirical solve probability', color='#ee6677')
+    a1.set_xticks(list(x)); a1.set_xticklabels(lab)
+    a1.set_xlabel('degeneracy g = distinct proofs found (64 samples)')
+    ax2 = a1.twinx()
+    ax2.bar([i + 0.2 for i in x], [r['E_min'] for r in d], width=0.4,
+            color='#4477aa', label='min surprisal  E')
+    ax2.set_ylabel('min surprisal E [nats]  (lower = each proof more likely)',
+                   color='#4477aa')
+    a1.set_title('Theorems with MORE proofs solve better\n'
+                 'despite each proof being LESS likely')
+
+    a2.plot([r['log_g'] for r in d], [r['log_p'] for r in d], 'o-',
+            color='#ee6677', lw=2, ms=6, label='observed')
+    x0, y0 = d[0]['log_g'], d[0]['log_p']
+    a2.plot([r['log_g'] for r in d], [y0 + (r['log_g'] - x0) for r in d], 'k--',
+            lw=1, label='idealised slope +1  (log p = log g - E)')
+    a2.set_xlabel('log g  (entropy term)')
+    a2.set_ylabel('log p  (solve probability)')
+    a2.set_title('Entropy term has the predicted sign,\n'
+                 'attenuated because p saturates near 1')
+    a2.legend(frameon=False, fontsize=9); a2.grid(alpha=0.25)
+    fig.tight_layout()
+    fig.savefig('figures/fig8_degeneracy.png', dpi=160)
+    print('figures/fig8_degeneracy.png')

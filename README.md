@@ -117,6 +117,7 @@ No per-theorem inspection of the test set, no tuning against it.
 
 | path | what |
 |---|---|
+| `REPORT.md` | **the full report** -- builds the setting from zero (what a proof is, what the rules mean, what subproofs are), then datasets, tokens, architecture, loss, optimiser, RL, the metric, all results with figures inline |
 | `PRIMER.md` | **start here if the domain is unfamiliar** -- proofs, datasets, tokens, architecture, loss, optimiser, RL, the metric, and the statistical-physics formulation, built from scratch with no assumed background |
 | `writeup.md` | the report: executive summary, per-stage method, limitations |
 | `numbers.md` | every number in the write-up, with its source file |

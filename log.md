@@ -528,3 +528,54 @@ can prove.
 
 The test_short overlap (34.1% under renaming) is the remaining case where
 contamination could have mattered; the decontaminated test numbers settle it.
+
+### Energy-entropy decomposition of proof search (new experiment)
+
+A theorem is proved if ANY of its proofs is sampled, so the governing quantity
+is the free energy of the whole proof set, not the energy of one proof:
+
+    p(prove x) = sum_{y in Y(x)} exp(-E(y)) = exp(-F(x))
+    F(x) = -log sum_y exp(-E(y))  ~  E - log g       (g = degeneracy)
+
+`scripts_degeneracy.py`, 800 hard targets, k=64, RL model. Grouping solved
+theorems by the number of DISTINCT proofs found:
+
+| g | n | mean p | mean E_min |
+|---|---|---|---|
+| 1 | 180 | 0.432 | 1.763 |
+| 2-3 | 126 | 0.718 | 0.674 |
+| 4-7 | 45 | 0.818 | 0.818 |
+| 8-15 | 26 | 0.718 | 1.342 |
+| 16-31 | 34 | 0.813 | 2.313 |
+| 32-64 | 35 | 0.911 | 3.192 |
+
+**Confirmed qualitatively:** theorems with g=1 have the *best* minimum energy
+(1.76) and the *worst* solve rate (0.43); theorems with g=32-64 have nearly
+twice the energy (3.19) and solve at 0.91. The entropy term more than
+compensates for worse per-proof energy -- the free-energy tradeoff, observed.
+
+Fitted slopes: d log p / d log g = **+0.397** (idealised +1),
+d log p / d E_min = **-0.544** (idealised -1). Right signs, attenuated
+magnitudes.
+
+**Not confirmed quantitatively, and here is why:**
+1. `log p = log g - E` is a small-p linearisation; most solved theorems here sit
+   at p = 0.4-0.9 where log p saturates at 0.
+2. `F = E - log g` assumes all proofs have comparable energy. They do not; the
+   sum is dominated by the lowest-energy few, so the effective degeneracy is
+   `g_eff = sum exp(-(E_y - E_min)) <= g`.
+3. `g` is censored -- distinct proofs found in 64 draws, not |Y(x)| -- and is
+   estimated from the same draws as p, which couples them and would *inflate*
+   the slope. Attenuation despite that coupling means the true attenuation from
+   (1) and (2) is larger than measured.
+
+So the mechanism is real and the signs are predicted; the idealised exponents
+are not, and the failure is understood rather than ignored.
+
+Consequence for the degenerate-theorem question: trivial theorems have enormous
+g (insert a reiteration, swap ANDI argument order, add a vacuous ORI), so they
+dominate the low-L part of the partition function and contribute nothing at high
+L. That is a concrete mechanism by which the 23.1% degenerate fraction of the
+training distribution would shape the stopping prior toward short proofs.
+UNTESTED: verifying it requires retraining Stage 1 on non-trivial-only data and
+re-measuring P(QED) and P.

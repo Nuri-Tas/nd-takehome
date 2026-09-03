@@ -16,3 +16,4 @@ contamination shifts both arms equally and cannot produce the effect shown.
 Re-measuring Stage 1 clean confirmed this directly: P is 7 either way, and the
 validation/test scores moved by less than a point.
 | fig7_mechanism | `numbers_energy.json`, `numbers_energy_vs_length.json` | pre-fix models (Stage-1 vs after-RL from the same pipeline), so the before/after comparison is internally controlled; it demonstrates the mechanism, not a headline number |
+| fig8_degeneracy | `numbers_degeneracy.json` | clean RL model on the clean hard pool |
