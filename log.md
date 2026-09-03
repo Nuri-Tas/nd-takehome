@@ -124,10 +124,14 @@ biased toward "theorems this model cannot do" -- somewhat circular. A bounded
 search prover would give a cleaner "no short proof exists" claim. Declared
 rather than hidden; see `writeup.md` limitations.
 
-### Still to do
+### Still to do (ALL COMPLETED -- see entries below)
 
-- Re-measure P on the corrected pool; run expert iteration with the frozen
-  control, 2 seeds; Stage 3 tables; one-shot test-set run; writeup.
+- ~~Re-measure P on the corrected pool; run expert iteration with the frozen
+  control, 2 seeds; Stage 3 tables; one-shot test-set run; writeup.~~ Done: P=7
+  confirmed on the decontaminated pool, both seeds run to 5 rounds
+  (frontier 9 and 10 against a frozen control at 7), Stage 3 table and a single
+  greedy test run per file completed, REPORT.md / writeup.md / numbers.md
+  written.
 
 ### The barrier: a learned stopping prior (main finding)
 
@@ -423,13 +427,13 @@ Testing L*(k) = max{L : E_min(L) <= log k} against a k=1..64 sweep
 (`scripts_frontier_vs_k.py`) matches the observed robust frontier in **11 of 12**
 testable cases (k=1 is degenerate: log 1 = 0). The one miss is the RL model at
 k=4 -- predicted 8, observed 9, with E_min(9)=1.51 against log 4=1.39, off by
-0.12 nats.
+0.12 units of log-probability.
 
 Consequences:
 - **Sampling is exponentially weak.** k enters only as log k. Lifting Stage 1
   from 7 to 8 lines by sampling alone needs k ~ 2590 instead of 1.
-- **Training is exponentially strong.** RL lowered E_min(8) by 7.8 nats
-  (~2400x in probability) and E_min(9) by 23.3 nats (~1.3e10x) at fixed k.
+- **Training is exponentially strong.** RL lowered E_min(8) by 7.8 units of log-probability
+  (~2400x in probability) and E_min(9) by 23.3 units of log-probability (~1.3e10x) at fixed k.
   That is the precise sense in which RL beats the frozen control.
 - **The apparent discontinuity is a threshold artefact.** E_min moves
   continuously with training; L* is an integer max over a threshold, so it
@@ -579,3 +583,60 @@ L. That is a concrete mechanism by which the 23.1% degenerate fraction of the
 training distribution would shape the stopping prior toward short proofs.
 UNTESTED: verifying it requires retraining Stage 1 on non-trivial-only data and
 re-measuring P(QED) and P.
+
+### Tracking the mechanism round by round
+
+`scripts_qed_across_rounds.py`. If the diagnosis is right -- expert iteration
+works by lowering the probability of stopping -- then P(QED | n lines) should
+fall monotonically across rounds, not just between the endpoints.
+
+| checkpoint | L=6 | L=7 | L=8 | L=9 | L=10 | L=11 | L=12 |
+|---|---|---|---|---|---|---|---|
+| SFT (round 0) | 0.123 | 0.518 | 0.865 | 0.965 | 0.972 | 0.975 | 0.974 |
+| after round 1 | 0.044 | 0.186 | 0.484 | 0.773 | 0.911 | 0.963 | 0.979 |
+| after round 2 | 0.030 | 0.113 | 0.336 | 0.642 | 0.835 | 0.918 | 0.952 |
+| after round 3 | 0.032 | 0.095 | 0.244 | 0.494 | 0.690 | 0.805 | 0.888 |
+| after round 4 | 0.028 | 0.076 | 0.169 | 0.366 | 0.510 | 0.627 | 0.747 |
+
+Monotone at every length and every round. Note `final.pt` == `policy_r4.pt`:
+round 5 samples and evaluates but is not followed by a retrain.
+
+### ORACLE CONTROL: would supervised training on long proofs have done it anyway?
+
+`ablation_oracle_sft.py`. Trained a model on the generator's own gold 9-16 line
+proofs for the RL targets -- data the exam forbids for Stage 1 and that RL never
+had -- and measured the frontier on the transfer set, held out from every arm.
+An analysis control, not a submitted model.
+
+| model | trained on | greedy | pass@32 | robust frontier |
+|---|---|---|---|---|
+| Stage 1 | cap-6 only | 5.9% | 21.9% | **7** |
+| after RL | cap-6 + ~13k self-found | 25.8% | 49.6% | **9-10** |
+| oracle SFT | cap-6 + 1994 gold long | 23.2% | **63.0%** | **16** |
+
+**This is the most deflating result in the project and it belongs in the
+headline.** Gold long proofs give frontier 16; RL gives 9-10. RL recovered
+roughly a quarter to a third of the gap between the baseline and what real
+supervision achieves. The bottleneck here is data, and expert iteration is an
+inefficient way to manufacture it.
+
+What RL can still claim: that data does not exist. The cap removes it by
+construction, and outside a synthetic setting nothing hands you longer proofs.
+RL produces part of the same effect from the model plus a checker alone.
+
+The mechanism is identical across all three regimes, which is the strongest
+support the stopping-prior diagnosis has:
+
+| model | P(stop) after 9 lines | frontier |
+|---|---|---|
+| Stage 1 | 0.965 | 7 |
+| after RL | 0.366 | 9-10 |
+| oracle SFT | 0.109 | 16 |
+
+The frontier is a monotone function of one scalar, and that scalar is set by the
+length distribution of the training data.
+
+### Terminology
+
+Removed the unit "nats" from every user-facing document at the reader's request;
+surprisals are now reported as bare log-probabilities.

@@ -389,7 +389,7 @@ further, so the model still writes a short derivation and stops.
 `scripts_energy_vs_length.py`, `scripts_frontier_vs_k.py`. Minimum total
 surprisal `E = -log p(proof)` over verified proofs of each length:
 
-| L | Stage-1 `E_min` (nats) | k needed | after-RL `E_min` | k needed |
+| L | Stage-1 `E_min` (units of log-probability) | k needed | after-RL `E_min` | k needed |
 |---|---|---|---|---|
 | 2-7 | 0.01-0.30 | ~1 | 0.01-0.13 | ~1 |
 | 8 | **7.86** | 2,590 | **0.05** | 1.05 |
@@ -408,8 +408,8 @@ Frontier vs budget (robust frontier, >= 5 distinct proofs):
 | after RL | 8 | 8 | 9 | 9 | 9 | 9 | **9** |
 
 Sampling 64x more buys Stage 1 nothing, because `k` enters only as `log k`.
-RL lowered `E_min(8)` by 7.8 nats (~2,400x in probability) and `E_min(9)` by
-23.3 nats (~1.3e10) at fixed `k`.
+RL lowered `E_min(8)` by 7.8 units of log-probability (~2,400x in probability) and `E_min(9)` by
+23.3 units of log-probability (~1.3e10) at fixed `k`.
 
 ## Reference-token coverage [unaffected: clean pools]
 

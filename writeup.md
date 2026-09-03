@@ -283,8 +283,8 @@ found:
    than 1. This is why the frozen control is flat in figure 3 and why its robust
    frontier never leaves 7 even at k=64.
 2. **Training is exponentially strong, because it moves E directly.** RL lowered
-   `E_min(8)` by 7.8 nats (a factor of ~2,400 in probability) and `E_min(9)` by
-   23.3 nats (~1.3e10) at the *same* k. That is the mechanism behind every gap
+   `E_min(8)` by 7.8 units of log-probability (a factor of ~2,400 in probability) and `E_min(9)` by
+   23.3 units of log-probability (~1.3e10) at the *same* k. That is the mechanism behind every gap
    between the policy and the frozen control in this write-up.
 3. **The step in the frontier is a threshold artefact, not a phase transition.**
    `E_min` moves continuously as training proceeds; `L*` is an integer maximum

@@ -509,57 +509,115 @@ reinforcement learning with verifiable rewards.
 
 ### 7.2 Expert iteration — the algorithm used here
 
-I do **not** use policy gradients (PPO, GRPO, REINFORCE). I use **expert
-iteration**, also called rejection-sampling fine-tuning or STaR. One **round**:
+**What RL is trying to achieve here, in one sentence:** the exam forbids
+supervised training on proofs longer than 6 lines and no external source of
+longer proofs exists, so the only way to obtain training data past the cap is
+for the model to *manufacture it* — generate candidates, let the verifier judge
+them, and keep what survives.
 
-    for each of the ~2000 target theorems:
-        sample k = 32 attempts at temperature 1.0      <- exploration
-        run each through the verifier                   <- reward
-        keep the accepted ones                          <- rejection sampling
-    pool <- pool + kept proofs
-    policy <- finetune(Stage-1 weights, pool + 20k Stage-1 examples)
+One **round**:
 
-Five rounds, about 135 seconds each.
+    for each of the ~2000 TARGET THEOREMS:
+        sample k = 32 attempts at temperature 1.0     <- exploration
+        run each through the verifier                  <- binary reward, 0 or 1
+        keep the attempts with reward 1                <- rejection sampling
+    POOL <- POOL + kept proofs
+    policy <- finetune(Stage-1 weights, POOL + 20k cap-6 examples)
 
-**This is expectation-maximisation.** Treat the proof `y` as a latent variable
-and "success" as the observation:
+Five rounds, about 135 seconds each. Every term in that block, defined:
 
-    E-step:  q(y)  proportional to  p_theta(y|x) * r(x,y)     posterior over proofs given success
-    M-step:  theta' = argmax  E_q [ log p_theta'(y|x) ]
+**Target theorems.** The 1,994 sequents in `data/rl_targets_hard.jsonl`. They
+were generated with proofs of 9-16 lines and then *filtered*: any candidate for
+which 24 samples from a trained model found a proof of 6 lines or fewer was
+discarded. The filter is what makes them beyond-cap; the generating length alone
+would not (§2.6).
 
-Sampling k times and training on the successes *is* a Monte-Carlo E-step
+**Sampling, and what temperature means.** The model never outputs "a proof". At
+each step it outputs a probability distribution over the next token. How you
+*choose* from that distribution is a separate decision:
+
+    logits at some step:    Q: 0.50   P: 0.30   ( : 0.15   ~ : 0.05
+
+    greedy (tau -> 0)   always take Q            -> identical proof every time
+    tau = 1.0           draw from those odds     -> Q half the time, P a third...
+
+So the model is only deterministic under greedy decoding. At `tau = 1.0` it is a
+random sampler, and 32 attempts explore 32 different continuations. **That
+randomness is the search.** Greedy gives one proof; if it is wrong, repeating it
+a million times yields nothing new.
+
+**The pool.** Verified proofs only, accumulated across rounds. Two sources:
+
+1. *On-target* — the attempt proved the theorem it was asked about.
+2. *Hindsight-relabelled* — the attempt failed its target but is a valid proof of
+   some **other** theorem. The theorem is read off the proof itself (its `PR`
+   lines are the premises, its final line the conclusion), that sequent is
+   verified, and the pair is added. Implemented in `nd/relabel.py`, filtered
+   against every evaluation set including atom-renamings.
+
+Attempts that are not valid proofs of anything are **discarded entirely**. The
+final pool held 13,331 proofs. So no, not everything goes in — roughly 30% of
+attempts survive, and the rest are thrown away.
+
+**What finetune does.** Ordinary supervised training: AdamW on cross-entropy
+(§6.2) over the pool for 1,200 steps. Weights are updated by gradient descent
+exactly as in Stage 1. The only difference from Stage 1 is *which data* it runs
+on.
+
+**Why restart from the Stage-1 weights every round.** If each round continued
+from the previous policy, round 5's model would be five fine-tunes deep, and an
+improvement could come either from better data or from accumulated drift and
+over-fitting. Restarting means every round computes `train(Stage-1, pool_n)`, so
+the **only** thing varying across rounds is the pool. Any change is then
+attributable to data, which is what we want to measure. The thing that
+accumulates across rounds is the pool, not the weights.
+
+**Why this algorithm and not PPO or GRPO.** A frequent misreading, so stated
+precisely:
+
+- **Weights are updated.** `finetune` runs gradient descent; parameters change.
+- **There is no reward gradient.** No policy-gradient estimator, no PPO ratio, no
+  advantage term. `grad(reward)` is never computed.
+
+The reward enters as a *filter on which data survives*, not as a factor in the
+gradient:
+
+    policy gradient:    grad J = E[ r(x,y) * grad log p(y|x) ]   reward multiplies the gradient
+    expert iteration:   keep {y : r(x,y) = 1}, then
+                        grad L = - sum over kept of grad log p(y|x)   reward selects the dataset
+
+Consequences of that choice: failures are discarded rather than pushed down, so
+the method throws information away; in exchange it has no estimator variance, no
+need for clipping or baselines or a value head, and the pool is reusable across
+rounds because it is just supervised data. With a *perfect* verifier and cheap
+sampling that is a good trade, which is why STaR-style methods dominate settings
+like this one.
+
+**It is expectation-maximisation.** Treat the proof `y` as a latent variable and
+"success" as the observation:
+
+    E-step:   q(y)  proportional to  p_theta(y|x) * r(x,y)     posterior over proofs given success
+    M-step:   theta' = argmax  E_q [ log p_theta'(y|x) ]
+
+Sampling k times and training on the accepted samples *is* a Monte-Carlo E-step
 followed by an exact M-step. It maximises a lower bound on
 `log p_theta(success | x)`.
 
-Compared with policy gradient:
-
-| | policy gradient | expert iteration |
-|---|---|---|
-| uses failures | yes (negative advantage) | **discards them** |
-| estimator variance | high; needs baselines, clipping | none — it is supervised |
-| off-policy reuse | needs importance ratios | the pool persists across rounds |
-| information used | full reward signal | binary filter only |
-
-It throws away the information in failures and buys stability in return. With a
-*perfect* verifier and cheap sampling, that is a good trade.
-
-Three implementation choices:
-
-- **Restart from the Stage-1 weights each round**, not from the previous policy.
-  Prevents drift; keeps each round comparable.
-- **Mix in Stage-1 data** so short-proof ability is not forgotten.
-- **Hindsight relabelling**: a rejected attempt is often a valid proof of a
-  *different* theorem. Read that theorem off the proof (its `PR` lines are the
-  premises, its last line the conclusion), verify it, and add it to the pool.
-
 ### 7.3 The frozen control — why any of this is a claim
 
-A copy of the Stage-1 model receives **exactly the same number of attempts every
-round** and is never retrained.
+A copy of the Stage-1 model receives **exactly the same number of attempts in
+every round** — k = 32 per target, every round, so after five rounds both arms
+have had 160 attempts per target — and is never retrained. The only difference
+between the arms is that one was fine-tuned between rounds and the other was not.
 
 This is not bookkeeping; it is the entire basis for believing the result.
-Sampling 32 times is *itself* a search. Without the control, "RL solved N
-theorems" might mean only "we sampled a lot".
+**Sampling 32 times is itself a search.** Concretely: if a model has a 3% chance
+of solving some theorem in one attempt, then one attempt succeeds 3% of the time
+but 32 attempts succeed `1 - 0.97^32 = 62%` of the time. That is a 3% -> 62% jump
+with **no learning whatsoever**. So a headline like "RL solved 55% of targets"
+could be almost entirely sampling. The frozen control measures exactly that
+portion — it reached 31.2% — and the RL contribution is the difference, not the
+total.
 
 Verification that the arms are matched: at round 1 the policy **is** the frozen
 model, and they solve 463 vs 440 of 1,994 — equal within noise. Had they
@@ -707,21 +765,112 @@ minimum surprisal of the cheapest verified L-line proof is flat and then
 **cliffs**; RL moves that cliff from between 7 and 8 to past 9. A proof is
 sampleable when its surprisal falls below the budget `log k` (dashed line).*
 
-This is the causal chain, and each link is measured:
+This is the causal chain, and each link is measured.
 
-1. After supervised training, `p(correct 8-line proof)` is small but **nonzero**
-   — `exp(-7.86)`, about 4 in 10,000. Nonzero because the model learned *local*
-   structure and a long proof is a composition of local steps.
-2. Sampling 32 times at `tau = 1` is a **search** that surfaces such rare events.
-3. The verifier labels them **exactly and for free**.
-4. Fine-tuning on an accepted 7-line proof raises its probability — and that
-   training example contains a *decision to continue* at line 6, so the gradient
-   directly lowers `P(QED | 6 lines written)`.
-5. A model fluent at 7 lines has non-trivial probability at 8. Repeat.
+**Step 1 — the capability is latent, not absent.** "Latent" means: the model
+already assigns *nonzero probability* to a correct long proof, it just almost
+never emits one. Measured, for Stage 1 the cheapest verified 8-line proof has
+probability about 4 in 10,000. That is small, but it is not zero, and it is
+nonzero for a concrete reason — the model learned *local* structure (which rules
+apply to which formulas, how boxes open and close), and a long proof is a
+composition of local steps.
 
-Nothing is "forced" and nothing appears from nothing. A learned scalar — the
-probability of stopping at each boundary — moved, because training examples
-containing "continue" pushed it.
+**Step 2 — sampling is search.** 32 draws at temperature 1.0 explore 32 different
+continuations. A 1-in-10,000 event is still rare in 32 draws, but across 2,000
+targets it happens somewhere.
+
+**Step 3 — the verifier separates signal from noise, for free.** Of 32 attempts,
+most are wrong. **Those are discarded** — expert iteration never trains on them
+(§7.2). The point of this step is not that failures are informative; it is that
+*correct* attempts can be identified with certainty and no human effort. The
+verifier is a binary oracle: 1 if the proof is accepted for the prompted
+sequent, 0 otherwise, with no partial credit. Checking is linear time; finding is
+the hard direction. That asymmetry — the **generator-verifier gap** — is what
+makes a free, exact training label available for something genuinely hard.
+
+**Step 4 — the gradient moves one specific quantity.** Fine-tuning on an accepted
+7-line proof raises its probability. That training example contains a *decision
+to continue* at line 6, so the gradient directly lowers `P(QED | 6 lines
+written)`. This is not an interpretation; it is trackable, and §9.4.1 tracks it.
+
+**Step 5 — the bootstrap.** A model fluent at 7 lines has non-trivial probability
+at 8. Sample, verify, retrain. Round n's output is round n+1's training data.
+
+### 9.4.1 The mechanism, tracked round by round
+
+If step 4 is the mechanism, then `P(QED | n lines)` should fall monotonically
+across rounds. Teacher-forcing each round's checkpoint along known-valid 9-16
+line proofs (`scripts_qed_across_rounds.py`):
+
+| checkpoint | L=6 | L=7 | L=8 | **L=9** | L=10 | L=11 | L=12 |
+|---|---|---|---|---|---|---|---|
+| SFT (round 0) | 0.123 | 0.518 | 0.865 | **0.965** | 0.972 | 0.975 | 0.974 |
+| after round 1 | 0.044 | 0.186 | 0.484 | **0.773** | 0.911 | 0.963 | 0.979 |
+| after round 2 | 0.030 | 0.113 | 0.336 | **0.642** | 0.835 | 0.918 | 0.952 |
+| after round 3 | 0.032 | 0.095 | 0.244 | **0.494** | 0.690 | 0.805 | 0.888 |
+| after round 4 | 0.028 | 0.076 | 0.169 | **0.366** | 0.510 | 0.627 | 0.747 |
+
+Monotone at every length and every round. At line 9 the stopping probability
+falls from 0.965 to 0.366. (`final.pt` equals `policy_r4.pt`: round 5 samples and
+evaluates but is not followed by a retrain, so the last weight update is round
+4's.)
+
+### 9.4.2 The oracle control: would supervised learning have done this anyway?
+
+The obvious objection: *if you simply trained on long proofs you would also get
+long proofs, so what does RL add?* The answer turns on **where the data comes
+from** — there is no external supply of proofs past the cap, and manufacturing
+that supply is precisely what RL does. But the objection deserves a measurement,
+not an argument.
+
+So: hand a model the generator's own 9-16 line proofs for the RL targets — gold
+data RL never had, and data the exam rules forbid for Stage 1 — and measure the
+frontier on the transfer set, which no arm ever trains on
+(`ablation_oracle_sft.py`). This is an **analysis control, not a submitted
+model**.
+
+| model | trained on | greedy | pass@32 | **robust frontier** |
+|---|---|---|---|---|
+| Stage 1 | cap-6 only | 5.9% | 21.9% | **7** |
+| after RL | cap-6 + ~13k **self-found** proofs | 25.8% | 49.6% | **9-10** |
+| **oracle SFT** | cap-6 + 1,994 **gold** long proofs | 23.2% | **63.0%** | **16** |
+
+Oracle written lengths run to 17:
+`{7:333, 8:428, 9:357, 10:166, 11:140, 12:63, 13:57, 14:26, 15:8, 16:7, 17:2}`.
+
+**Three things follow, and the first is uncomfortable for the headline.**
+
+1. **The objection is correct: gold data is far better than RL.** Frontier 16
+   versus 9-10. RL recovered roughly a quarter to a third of the gap between the
+   Stage-1 baseline (7) and what supervision on real long proofs achieves (16).
+   The bottleneck in this setting is *data*, and expert iteration is an
+   inefficient way to manufacture it.
+2. **But that data does not exist.** The exam caps supervised training at 6 lines
+   precisely to remove it, and outside a synthetic setting there is no oracle
+   handing you longer proofs. RL's contribution is not that it beats gold data;
+   it is that it produces *some* of the same effect **from nothing but the model
+   and a checker**.
+3. **The mechanism is identical in both arms**, which is the strongest evidence
+   that the diagnosis is right:
+
+| model | P(stop) after 9 lines | robust frontier |
+|---|---|---|
+| Stage 1 (cap-6 data) | **0.965** | 7 |
+| after RL (self-found 6-8 line proofs) | **0.366** | 9-10 |
+| oracle SFT (gold 9-16 line proofs) | **0.109** | 16 |
+
+![Stopping prior across rounds, and the oracle bound](figures/fig9_rounds_qed.png)
+
+*Figure 9. Left: every RL round lowers the stopping probability at every length;
+the oracle model trained on gold long proofs (dashed) sits far below all of
+them. Right: the frontier tracks this single number monotonically across three
+very different training regimes.*
+
+The frontier is a monotone function of one scalar — the probability of stopping —
+and that scalar is **set by the length distribution of the training data**. RL
+changes it by manufacturing longer training examples; gold data changes it more
+because the examples are longer still. Nothing else about the three models
+differs in kind.
 
 ### 9.5 And none of it transfers
 
@@ -779,7 +928,7 @@ Three consequences, and they answer "why 9 and not 30":
    1 from 7 to 8 lines by sampling alone would need ~2,590 samples instead of 1.
    This is exactly why the frozen control's frontier never moves.
 2. **Training is exponentially strong.** It moves `E` directly, and `E` sits in
-   an exponent. RL cut `E_min(8)` by 7.8 nats — a factor of ~2,400 in
+   an exponent. RL cut `E_min(8)` by 7.8 units of log-probability — a factor of ~2,400 in
    probability — at the *same* budget.
 3. **Each further line costs another cliff.** The frontier advances roughly one
    line per few rounds because each round must pay down a new energy barrier.

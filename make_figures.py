@@ -179,7 +179,7 @@ def fig_energy():
         a1.text(2.1, _m.log(k) + 0.5, f'budget log k, k={k}', fontsize=8)
     a1.set_yscale('symlog', linthresh=1)
     a1.set_xlabel('proof length L (lines)')
-    a1.set_ylabel('min surprisal  E = -log p(proof)   [nats]')
+    a1.set_ylabel('min surprisal  E = -log p(proof)')
     a1.set_title('Cost of the cheapest L-line proof\n'
                  'a proof is sampleable when E <= log k')
     a1.legend(frameon=False); a1.grid(alpha=0.25)
@@ -234,7 +234,7 @@ def fig_mechanism():
     a2.text(2.1, _m.log(32) * 1.15, 'budget log k at k=32', fontsize=9)
     a2.set_yscale('symlog', linthresh=1)
     a2.set_xlabel('proof length L (lines)')
-    a2.set_ylabel('min surprisal E = -log p(proof)  [nats]')
+    a2.set_ylabel('min surprisal E = -log p(proof)')
     a2.set_title('The consequence: the energy cliff moves right\n'
                  'a proof is sampleable when E <= log k')
     a2.legend(frameon=False); a2.grid(alpha=0.25)
@@ -258,7 +258,7 @@ def fig_degeneracy():
     ax2 = a1.twinx()
     ax2.bar([i + 0.2 for i in x], [r['E_min'] for r in d], width=0.4,
             color='#4477aa', label='min surprisal  E')
-    ax2.set_ylabel('min surprisal E [nats]  (lower = each proof more likely)',
+    ax2.set_ylabel('min surprisal E  (lower = each proof more likely)',
                    color='#4477aa')
     a1.set_title('Theorems with MORE proofs solve better\n'
                  'despite each proof being LESS likely')
@@ -276,3 +276,46 @@ def fig_degeneracy():
     fig.tight_layout()
     fig.savefig('figures/fig8_degeneracy.png', dpi=160)
     print('figures/fig8_degeneracy.png')
+
+
+def fig_rounds_qed():
+    """P(stop) tracked across every RL round, plus the oracle upper bound."""
+    import json as _j
+    d = _j.load(open('numbers_qed_rounds.json'))
+    order = ['SFT (round 0)', 'after round 1', 'after round 2', 'after round 3',
+             'after round 4', 'ORACLE SFT (gold long proofs)']
+    cols = ['#222222', '#6699cc', '#88bbdd', '#eeaa77', '#ee6677', '#228833']
+    fig, (a1, a2) = plt.subplots(1, 2, figsize=(12, 4.4))
+    for name, c in zip(order, cols):
+        if name not in d:
+            continue
+        q = {int(k): v for k, v in d[name].items()}
+        ks = sorted(q)
+        a1.plot(ks, [q[k] for k in ks], 'o-', color=c, lw=2, ms=4,
+                label=name, ls='--' if 'ORACLE' in name else '-')
+    a1.axvspan(1, 6, color='0.93', zorder=0)
+    a1.text(3.3, 0.55, 'training cap', ha='center', fontsize=9, color='0.4')
+    a1.set_xlabel('lines already written')
+    a1.set_ylabel('P(stop and emit QED)')
+    a1.set_title('Every RL round lowers the stopping probability')
+    a1.legend(frameon=False, fontsize=8); a1.grid(alpha=0.25)
+
+    names = ['Stage 1\n(cap-6 only)', 'after RL\n(self-found)', 'oracle SFT\n(gold long)']
+    stop9 = [d['SFT (round 0)']['9'], d['after round 4']['9'],
+             d['ORACLE SFT (gold long proofs)']['9']]
+    front = [7, 9, 16]
+    ax = a2
+    b = ax.bar([0, 1, 2], stop9, color=['#888888', '#ee6677', '#228833'], width=0.5)
+    ax.set_xticks([0, 1, 2]); ax.set_xticklabels(names, fontsize=9)
+    ax.set_ylabel('P(stop) after 9 lines', color='0.3')
+    ax.set_ylim(0, 1.05)
+    for i, (s, f) in enumerate(zip(stop9, front)):
+        ax.text(i, s + 0.03, f'{s:.3f}', ha='center', fontsize=10)
+        ax.text(i, 0.02, f'frontier\n{f}', ha='center', fontsize=11, weight='bold',
+                color='white' if s > 0.3 else '0.2')
+    ax.set_title('Lower stopping prior -> longer proofs\n'
+                 'the frontier tracks this one number')
+    ax.grid(alpha=0.25, axis='y')
+    fig.tight_layout()
+    fig.savefig('figures/fig9_rounds_qed.png', dpi=160)
+    print('figures/fig9_rounds_qed.png')

@@ -535,7 +535,7 @@ This is the mechanism, in the order the causation runs.
 positive because the model has learned *local* structure -- which rules apply to
 which formulas, how boxes open and close -- and a long proof is a composition of
 local steps. Measured: for Stage 1, the cheapest verified 8-line proof has
-`-log p = 7.86` nats, i.e. probability about 4e-4.
+`-log p = 7.86` units of log-probability, i.e. probability about 4e-4.
 
 **Step 2: sampling is search.** Drawing k = 32 samples at temperature 1.0
 explores 32 different continuations rather than the single greedy one. Rare
@@ -660,7 +660,7 @@ against `log 4 = 1.39`, a 0.12-nat discrepancy.
    is *why* the frozen control's frontier never moves: over a 64x budget
    increase it stays at 7.
 2. **Training is exponentially strong.** It moves `E` directly, and `E` sits in
-   an exponent. RL lowered `E_min(8)` by 7.8 nats -- a factor of ~2,400 in
+   an exponent. RL lowered `E_min(8)` by 7.8 units of log-probability -- a factor of ~2,400 in
    probability -- at the *same* k. That is the precise sense in which RL beats
    resampling.
 3. **The frontier step is a threshold artefact.** `E_min` moves continuously as
