@@ -1,0 +1,19 @@
+RL targets 1994  transfer 800  heldout 500
+relabelling on; contamination filter holds 5335 theorems
+round 1: RL 22.7% [20.9-24.6] frozen 21.6% [19.8-23.4] | transfer 22.4% (frozen 20.6%) | heldout greedy 97.8% | frontier 7 (frozen 7) | pool 2995 | 130.3s
+   found lengths (written): {4: 16, 5: 102, 6: 346, 7: 300}
+   relabelled +2231 (lengths {1: 9, 2: 27, 3: 60, 4: 132, 5: 426, 6: 1512, 7: 63, 8: 2})
+round 2: RL 33.2% [31.2-35.3] frozen 22.6% [20.8-24.5] | transfer 30.8% (frozen 21.8%) | heldout greedy 96.0% | frontier 8 (frozen 7) | pool 4873 | 136.2s
+   found lengths (written): {4: 19, 5: 172, 6: 764, 7: 628, 8: 13}
+   relabelled +910 (lengths {1: 7, 2: 20, 3: 35, 4: 47, 5: 140, 6: 557, 7: 91, 8: 10, 9: 3})
+round 3: RL 41.2% [39.0-43.3] frozen 22.2% [20.4-24.1] | transfer 37.6% (frozen 22.4%) | heldout greedy 96.2% | frontier 8 (frozen 7) | pool 7331 | 131.8s
+   found lengths (written): {4: 20, 5: 254, 6: 1319, 7: 1009, 8: 83, 9: 3}
+   relabelled +984 (lengths {1: 7, 2: 15, 3: 33, 4: 63, 5: 135, 6: 574, 7: 131, 8: 20, 9: 4, 10: 2})
+round 4: RL 48.0% [45.8-50.2] frozen 22.7% [20.9-24.6] | transfer 44.9% (frozen 20.9%) | heldout greedy 96.4% | frontier 9 (frozen 7) | pool 10184 | 128.5s
+   found lengths (written): {4: 19, 5: 315, 6: 1837, 7: 1452, 8: 265, 9: 25, 10: 1}
+   relabelled +839 (lengths {1: 4, 2: 12, 3: 22, 4: 48, 5: 124, 6: 440, 7: 153, 8: 32, 9: 4})
+round 5: RL 52.6% [50.4-54.8] frozen 22.1% [20.3-24.0] | transfer 48.4% (frozen 21.6%) | heldout greedy 96.4% | frontier 10 (frozen 7) | pool 13668 | 129.4s
+   found lengths (written): {4: 16, 5: 360, 6: 2207, 7: 1889, 8: 611, 9: 106, 10: 10}
+   relabelled +933 (lengths {1: 7, 2: 11, 3: 29, 4: 34, 5: 122, 6: 429, 7: 241, 8: 46, 9: 7, 10: 6, 12: 1})
+saved runs/clean_seed1
+SEED1 COMPLETE

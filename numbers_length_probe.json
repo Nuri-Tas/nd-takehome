@@ -1,0 +1,56 @@
+{
+ "learned": {
+  "pos_mode": "learned",
+  "solved": 1824,
+  "n": 2000,
+  "written_lengths": {
+   "2": 69,
+   "3": 762,
+   "4": 2647,
+   "5": 5718,
+   "6": 8670,
+   "7": 180
+  },
+  "beyond_6": 180,
+  "robust_frontier": 7,
+  "longest_single": 7,
+  "k": 32,
+  "temperature": 1.0
+ },
+ "rope": {
+  "pos_mode": "rope",
+  "solved": 1836,
+  "n": 2000,
+  "written_lengths": {
+   "2": 69,
+   "3": 762,
+   "4": 2708,
+   "5": 5928,
+   "6": 8951,
+   "7": 300
+  },
+  "beyond_6": 300,
+  "robust_frontier": 7,
+  "longest_single": 7,
+  "k": 32,
+  "temperature": 1.0
+ },
+ "nope": {
+  "pos_mode": "nope",
+  "solved": 1822,
+  "n": 2000,
+  "written_lengths": {
+   "2": 69,
+   "3": 758,
+   "4": 2741,
+   "5": 5860,
+   "6": 9566,
+   "7": 73
+  },
+  "beyond_6": 73,
+  "robust_frontier": 7,
+  "longest_single": 7,
+  "k": 32,
+  "temperature": 1.0
+ }
+}

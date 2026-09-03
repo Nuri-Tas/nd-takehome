@@ -1,0 +1,19 @@
+{
+ "clean": {
+  "pos_mode": "rope",
+  "solved": 449,
+  "n": 1994,
+  "written_lengths": {
+   "4": 14,
+   "5": 108,
+   "6": 311,
+   "7": 300,
+   "8": 1
+  },
+  "beyond_6": 301,
+  "robust_frontier": 7,
+  "longest_single": 8,
+  "k": 32,
+  "temperature": 1.0
+ }
+}

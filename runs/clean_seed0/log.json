@@ -1,0 +1,297 @@
+[
+ {
+  "round": 1,
+  "rl_solved_round": 463,
+  "rl_solved_cum": 463,
+  "frozen_solved_round": 440,
+  "frozen_solved_cum": 440,
+  "n_targets": 1994,
+  "transfer_solved": 170,
+  "transfer_frozen": 178,
+  "n_transfer": 800,
+  "heldout_greedy": 0.978,
+  "heldout_n": 500,
+  "found_lengths": {
+   "4": 15,
+   "5": 114,
+   "6": 330,
+   "7": 304
+  },
+  "found_lengths_cum": {
+   "4": 15,
+   "5": 114,
+   "6": 330,
+   "7": 304
+  },
+  "frontier_round": 7,
+  "frontier_cum": 7,
+  "frozen_frontier": 7,
+  "frozen_lengths_cum": {
+   "4": 15,
+   "5": 105,
+   "6": 320,
+   "7": 289
+  },
+  "transfer_lengths": {
+   "4": 10,
+   "5": 35,
+   "6": 145,
+   "7": 97
+  },
+  "pool_size": 2952,
+  "relabelled_round": 2189,
+  "relabelled_lengths": {
+   "1": 8,
+   "2": 28,
+   "3": 57,
+   "4": 121,
+   "5": 402,
+   "6": 1487,
+   "7": 85,
+   "8": 1
+  },
+  "secs": 139.6
+ },
+ {
+  "round": 2,
+  "rl_solved_round": 675,
+  "rl_solved_cum": 679,
+  "frozen_solved_round": 453,
+  "frozen_solved_cum": 514,
+  "n_targets": 1994,
+  "transfer_solved": 238,
+  "transfer_frozen": 169,
+  "n_transfer": 800,
+  "heldout_greedy": 0.956,
+  "heldout_n": 500,
+  "found_lengths": {
+   "4": 19,
+   "5": 178,
+   "6": 682,
+   "7": 605,
+   "8": 22
+  },
+  "found_lengths_cum": {
+   "4": 20,
+   "5": 201,
+   "6": 778,
+   "7": 620,
+   "8": 22
+  },
+  "frontier_round": 8,
+  "frontier_cum": 8,
+  "frozen_frontier": 7,
+  "frozen_lengths_cum": {
+   "4": 19,
+   "5": 162,
+   "6": 520,
+   "7": 386,
+   "8": 1
+  },
+  "transfer_lengths": {
+   "4": 6,
+   "5": 38,
+   "6": 150,
+   "7": 186,
+   "8": 9
+  },
+  "pool_size": 4877,
+  "relabelled_round": 1047,
+  "relabelled_lengths": {
+   "1": 5,
+   "2": 22,
+   "3": 38,
+   "4": 74,
+   "5": 166,
+   "6": 623,
+   "7": 101,
+   "8": 18
+  },
+  "secs": 133.7
+ },
+ {
+  "round": 3,
+  "rl_solved_round": 846,
+  "rl_solved_cum": 850,
+  "frozen_solved_round": 454,
+  "frozen_solved_cum": 556,
+  "n_targets": 1994,
+  "transfer_solved": 311,
+  "transfer_frozen": 175,
+  "n_transfer": 800,
+  "heldout_greedy": 0.962,
+  "heldout_n": 500,
+  "found_lengths": {
+   "4": 22,
+   "5": 259,
+   "6": 1154,
+   "7": 1033,
+   "8": 72
+  },
+  "found_lengths_cum": {
+   "4": 24,
+   "5": 323,
+   "6": 1462,
+   "7": 1098,
+   "8": 75
+  },
+  "frontier_round": 8,
+  "frontier_cum": 8,
+  "frozen_frontier": 7,
+  "frozen_lengths_cum": {
+   "4": 22,
+   "5": 198,
+   "6": 704,
+   "7": 441,
+   "8": 1
+  },
+  "transfer_lengths": {
+   "4": 9,
+   "5": 48,
+   "6": 207,
+   "7": 256,
+   "8": 23
+  },
+  "pool_size": 7084,
+  "relabelled_round": 866,
+  "relabelled_lengths": {
+   "1": 10,
+   "2": 18,
+   "3": 28,
+   "4": 43,
+   "5": 144,
+   "6": 490,
+   "7": 101,
+   "8": 24,
+   "9": 8
+  },
+  "secs": 138.0
+ },
+ {
+  "round": 4,
+  "rl_solved_round": 984,
+  "rl_solved_cum": 989,
+  "frozen_solved_round": 440,
+  "frozen_solved_cum": 586,
+  "n_targets": 1994,
+  "transfer_solved": 361,
+  "transfer_frozen": 177,
+  "n_transfer": 800,
+  "heldout_greedy": 0.96,
+  "heldout_n": 500,
+  "found_lengths": {
+   "4": 22,
+   "5": 332,
+   "6": 1596,
+   "7": 1489,
+   "8": 212,
+   "9": 3
+  },
+  "found_lengths_cum": {
+   "4": 25,
+   "5": 470,
+   "6": 2342,
+   "7": 1720,
+   "8": 226,
+   "9": 3
+  },
+  "frontier_round": 8,
+  "frontier_cum": 8,
+  "frozen_frontier": 7,
+  "frozen_lengths_cum": {
+   "4": 23,
+   "5": 231,
+   "6": 861,
+   "7": 486,
+   "8": 1
+  },
+  "transfer_lengths": {
+   "4": 7,
+   "5": 48,
+   "6": 225,
+   "7": 334,
+   "8": 67,
+   "9": 2
+  },
+  "pool_size": 9801,
+  "relabelled_round": 913,
+  "relabelled_lengths": {
+   "1": 1,
+   "2": 13,
+   "3": 26,
+   "4": 63,
+   "5": 127,
+   "6": 496,
+   "7": 167,
+   "8": 17,
+   "9": 1,
+   "10": 1,
+   "12": 1
+  },
+  "secs": 135.9
+ },
+ {
+  "round": 5,
+  "rl_solved_round": 1084,
+  "rl_solved_cum": 1091,
+  "frozen_solved_round": 467,
+  "frozen_solved_cum": 622,
+  "n_targets": 1994,
+  "transfer_solved": 398,
+  "transfer_frozen": 162,
+  "n_transfer": 800,
+  "heldout_greedy": 0.968,
+  "heldout_n": 500,
+  "found_lengths": {
+   "4": 21,
+   "5": 374,
+   "6": 2116,
+   "7": 1948,
+   "8": 547,
+   "9": 32,
+   "10": 1
+  },
+  "found_lengths_cum": {
+   "4": 26,
+   "5": 649,
+   "6": 3472,
+   "7": 2503,
+   "8": 588,
+   "9": 33,
+   "10": 1
+  },
+  "frontier_round": 9,
+  "frontier_cum": 9,
+  "frozen_frontier": 7,
+  "frozen_lengths_cum": {
+   "4": 24,
+   "5": 265,
+   "6": 994,
+   "7": 542,
+   "8": 1
+  },
+  "transfer_lengths": {
+   "4": 7,
+   "5": 58,
+   "6": 234,
+   "7": 422,
+   "8": 148,
+   "9": 9
+  },
+  "pool_size": 13331,
+  "relabelled_round": 1044,
+  "relabelled_lengths": {
+   "1": 6,
+   "2": 14,
+   "3": 22,
+   "4": 34,
+   "5": 130,
+   "6": 516,
+   "7": 275,
+   "8": 36,
+   "9": 8,
+   "10": 3
+  },
+  "secs": 131.6
+ }
+]

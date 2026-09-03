@@ -1,0 +1,11 @@
+{
+ "solved": 260,
+ "written_lengths": {
+  "4": 16,
+  "5": 100,
+  "6": 353
+ },
+ "robust_frontier": 6,
+ "heldout_greedy": 0.966,
+ "vocab": 68
+}
