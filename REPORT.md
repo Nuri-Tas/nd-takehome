@@ -432,7 +432,7 @@ small numbers, which is why the ceiling is a hard stop rather than a gradual
 decline. Note that `rope` has the weakest prior at every line, which correctly
 predicted that it would write the most 7-line proofs.*
 
-### 9.3 Expert iteration works, and the control proves it
+### 9.3 Expert iteration results
 
 ![RL versus the frozen control](figures/fig3_rounds.png)
 
