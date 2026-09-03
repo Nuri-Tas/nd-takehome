@@ -355,7 +355,7 @@ diverged there, every later comparison would be meaningless.
 
 ### 8.1 Definition
 
-Fix a sampling protocol. The **robust frontier** of a model is
+The **robust frontier** of a model is
 
     the largest n such that the model produced at least 5 DISTINCT
     verifier-accepted proofs whose written length is exactly n
